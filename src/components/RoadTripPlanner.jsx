@@ -125,20 +125,15 @@ Use real town names and known businesses. Be specific and practical. Start direc
     setItinerary(null);
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 8000,
-          messages: [{ role: "user", content: buildPrompt() }],
-        }),
+        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 8000 }),
       });
       const data = await resp.json();
-      if (data.error) throw new Error(data.error.message);
-      const text = data.content?.find(b => b.type === "text")?.text || "";
-      if (!text) throw new Error("No response received.");
-      setItinerary(text);
+      if (data.error) throw new Error(data.error);
+      if (!data.text) throw new Error("No response received.");
+      setItinerary(data.text);
     } catch (e) {
       setError(e.message);
     } finally {
