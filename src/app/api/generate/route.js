@@ -1,0 +1,21 @@
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+export async function POST(request) {
+  try {
+    const { prompt, maxTokens } = await request.json();
+
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens || 8000,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = message.content?.find((b) => b.type === "text")?.text || "";
+    return Response.json({ text });
+  } catch (error) {
+    console.error("Anthropic API error:", error);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
