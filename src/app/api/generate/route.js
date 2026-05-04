@@ -4,12 +4,15 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(request) {
   try {
-    const { prompt, maxTokens } = await request.json();
+    const { prompt, messages, maxTokens } = await request.json();
+
+    // Support both single prompt and multi-turn messages
+    const msgs = messages || [{ role: "user", content: prompt }];
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: maxTokens || 8000,
-      messages: [{ role: "user", content: prompt }],
+      messages: msgs,
     });
 
     const text = message.content?.find((b) => b.type === "text")?.text || "";
