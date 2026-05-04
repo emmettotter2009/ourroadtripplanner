@@ -374,6 +374,69 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           <BonusPanel title="Scenic Route Alternatives" emoji="🏞️" content={scenic} loading={scenicLoading} onFetch={fetchScenic} accentColor="#059669" bgColor="#f0fdf4" />
         </div>
 
+        {/* Road Trip Essentials */}
+        <div style={{ marginTop: "1.5rem", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden", fontFamily: "sans-serif" }}>
+          <div style={{ background: "#FF9900", padding: "0.85rem 1.25rem", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🛒</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>Road Trip Essentials</span>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", marginLeft: "auto" }}>Shop on Amazon</span>
+          </div>
+          <div style={{ padding: "1rem 1.25rem", background: "white" }}>
+            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
+              Packing for your trip? Here are some essentials other road trippers love:
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {[
+                ...(!form.withKids ? [] : [
+                  { emoji: "🎮", label: "Kids Road Trip Games", q: "kids+road+trip+games+car" },
+                  { emoji: "🎧", label: "Kids Headphones", q: "kids+headphones+road+trip" },
+                ]),
+                ...(form.withKids ? [] : [
+                  { emoji: "🎵", label: "Bluetooth Speaker", q: "portable+bluetooth+speaker+outdoor" },
+                  { emoji: "🍷", label: "Travel Wine Accessories", q: "travel+wine+accessories" },
+                ]),
+                ...(form.vehicle === "motorcycle" ? [
+                  { emoji: "🎒", label: "Motorcycle Saddlebags", q: "motorcycle+saddlebags+luggage" },
+                  { emoji: "🧤", label: "Riding Gloves", q: "motorcycle+riding+gloves" },
+                ] : [
+                  { emoji: "📱", label: "Phone Car Mount", q: "phone+car+mount+magnetic" },
+                  { emoji: "🧊", label: "Portable Car Cooler", q: "portable+car+cooler+12v" },
+                ]),
+                ...(form.accommodation.some(a => /camp/i.test(a)) ? [
+                  { emoji: "🏕️", label: "Camping Chairs", q: "portable+camping+chairs+lightweight" },
+                  { emoji: "🔦", label: "Camping Lantern", q: "camping+lantern+led+rechargeable" },
+                ] : [
+                  { emoji: "🎒", label: "Car Seat Organizer", q: "car+seat+back+organizer" },
+                  { emoji: "🗺️", label: "Road Atlas USA", q: "road+atlas+united+states+2024" },
+                ]),
+                { emoji: "🧴", label: "Travel Toiletry Kit", q: "travel+toiletry+bag+toiletries" },
+                { emoji: "💊", label: "Motion Sickness Relief", q: "motion+sickness+relief+travel" },
+              ].map(({ emoji, label, q }) => (
+                <a
+                  key={q}
+                  href={`https://www.amazon.com/s?k=${q}&tag=ourroadtrippl-20`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 10px", borderRadius: 8,
+                    border: "1px solid #e5e7eb", textDecoration: "none",
+                    background: "#fafafa", transition: "all 0.15s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "#FF9900"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}
+                >
+                  <span style={{ fontSize: 18 }}>{emoji}</span>
+                  <span style={{ fontSize: 12, color: "#374151", fontWeight: 500 }}>{label}</span>
+                </a>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: "#d1d5db", marginTop: 10, textAlign: "center" }}>
+              As an Amazon Associate we earn from qualifying purchases.
+            </p>
+          </div>
+        </div>
+
         {/* Chat Dialog */}
         <div style={{ marginTop: "1.5rem", border: "1px solid #2563eb", borderRadius: 12, overflow: "hidden", fontFamily: "sans-serif" }}>
           <div
