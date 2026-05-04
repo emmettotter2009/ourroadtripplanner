@@ -163,22 +163,14 @@ Use real town names and businesses. Start directly with Day 1.`;
     try {
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 8000, stream: true }),
+        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 8000 }),
       });
-      if (!resp.ok) throw new Error("Server error");
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let full = "";
-      setLoading(false);
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        full += decoder.decode(value, { stream: true });
-        setItinerary(full);
-      }
-      if (!full) throw new Error("No response received.");
-      saveToHistory(full);
-    } catch (e) { setError(e.message); setLoading(false); }
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      if (!data.text) throw new Error("No response received.");
+      setItinerary(data.text);
+      saveToHistory(data.text);
+    } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
   const callAPI = async (prompt) => {
@@ -308,8 +300,8 @@ Use real town names and businesses. Start directly with Day 1.`;
     <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "4rem 1rem", fontFamily: "sans-serif" }}>
       <div style={{ fontSize: 40, marginBottom: 16, animation: "spin 1s linear infinite", display: "inline-block" }}>🚗</div>
       <style>{`@keyframes spin { 0%{transform:translateX(-20px)} 50%{transform:translateX(20px)} 100%{transform:translateX(-20px)} }`}</style>
-      <div style={{ fontSize: 16, color: "#111", fontWeight: 600, marginBottom: 8 }}>Starting your engine...</div>
-      <div style={{ fontSize: 13, color: gray }}>Your itinerary will appear as it's written</div>
+      <div style={{ fontSize: 16, color: "#111", fontWeight: 600, marginBottom: 8 }}>Building your itinerary...</div>
+      <div style={{ fontSize: 13, color: gray }}>This may take up to a minute — good things take time!</div>
     </div>
   );
 
