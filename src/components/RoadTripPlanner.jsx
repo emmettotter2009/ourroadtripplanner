@@ -47,6 +47,9 @@ export default function RoadTripPlanner() {
   const [scenic, setScenic] = useState(null);
   const [scenicLoading, setScenicLoading] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [tripHistory, setTripHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [viewingTrip, setViewingTrip] = useState(null);
   const [emailAddr, setEmailAddr] = useState("");
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -56,6 +59,8 @@ export default function RoadTripPlanner() {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) setForm(JSON.parse(saved));
+      const history = localStorage.getItem("roadtrip_history");
+      if (history) setTripHistory(JSON.parse(history));
     } catch(e) {}
   }, []);
 
@@ -73,6 +78,33 @@ export default function RoadTripPlanner() {
   };
 
   const clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch(e) {} };
+
+  const saveToHistory = (itineraryText) => {
+    try {
+      const trip = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString(),
+        start: form.start,
+        end: form.end,
+        depart: form.depart,
+        withKids: form.withKids,
+        vehicle: form.vehicle,
+        itinerary: itineraryText,
+      };
+      const existing = JSON.parse(localStorage.getItem("roadtrip_history") || "[]");
+      const updated = [trip, ...existing].slice(0, 20);
+      localStorage.setItem("roadtrip_history", JSON.stringify(updated));
+      setTripHistory(updated);
+    } catch(e) {}
+  };
+
+  const deleteTrip = (id) => {
+    try {
+      const updated = tripHistory.filter(t => t.id !== id);
+      localStorage.setItem("roadtrip_history", JSON.stringify(updated));
+      setTripHistory(updated);
+    } catch(e) {}
+  };
 
   const addKid = () => {
     const age = parseInt(kidInput);
@@ -131,13 +163,22 @@ Use real town names and businesses. Start directly with Day 1.`;
     try {
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 8000 }),
+        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 8000, stream: true }),
       });
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-      if (!data.text) throw new Error("No response received.");
-      setItinerary(data.text);
-    } catch (e) { setError(e.message); } finally { setLoading(false); }
+      if (!resp.ok) throw new Error("Server error");
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let full = "";
+      setLoading(false);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        full += decoder.decode(value, { stream: true });
+        setItinerary(full);
+      }
+      if (!full) throw new Error("No response received.");
+      saveToHistory(full);
+    } catch (e) { setError(e.message); setLoading(false); }
   };
 
   const callAPI = async (prompt) => {
@@ -213,13 +254,19 @@ Use real town names and businesses. Start directly with Day 1.`;
     </div>
   );
 
-  if (itinerary) {
+  const isStreaming = !loading && itinerary !== null;
+
+  if (itinerary !== null) {
     const days = parseDays(itinerary);
+    const stillWriting = loading === false && itinerary.length > 0 && !itinerary.match(/traveler tip|parent tip/i);
     return (
       <div style={{ maxWidth: 640, margin: "0 auto", fontFamily: "Georgia, serif", padding: "0 0 2rem" }}>
         <div style={{ padding: "1.5rem 0 1rem", borderBottom: "1px solid #e5e7eb", marginBottom: "1.5rem" }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: 0 }}>🗺️ Your Road Trip Itinerary</h1>
-          <p style={{ fontSize: 14, color: gray, marginTop: 4, fontFamily: "sans-serif" }}>{form.start} → {form.end}{form.depart ? ` · Departing ${form.depart}` : ""}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+            <p style={{ fontSize: 14, color: gray, margin: 0, fontFamily: "sans-serif" }}>{form.start} → {form.end}{form.depart ? ` · Departing ${form.depart}` : ""}</p>
+            {stillWriting && <span style={{ fontSize: 12, color: "#2563eb", fontFamily: "sans-serif", background: "#dbeafe", padding: "2px 10px", borderRadius: 10 }}>✍️ Writing...</span>}
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap", fontFamily: "sans-serif" }}>
@@ -259,17 +306,85 @@ Use real town names and businesses. Start directly with Day 1.`;
 
   if (loading) return (
     <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "4rem 1rem", fontFamily: "sans-serif" }}>
-      <div style={{ fontSize: 40, marginBottom: 16 }}>🚗</div>
-      <div style={{ fontSize: 16, color: "#111", fontWeight: 600, marginBottom: 8 }}>Building your itinerary...</div>
-      <div style={{ fontSize: 13, color: gray }}>This takes about 15–20 seconds</div>
+      <div style={{ fontSize: 40, marginBottom: 16, animation: "spin 1s linear infinite", display: "inline-block" }}>🚗</div>
+      <style>{`@keyframes spin { 0%{transform:translateX(-20px)} 50%{transform:translateX(20px)} 100%{transform:translateX(-20px)} }`}</style>
+      <div style={{ fontSize: 16, color: "#111", fontWeight: 600, marginBottom: 8 }}>Starting your engine...</div>
+      <div style={{ fontSize: 13, color: gray }}>Your itinerary will appear as it's written</div>
     </div>
   );
+
+  // Viewing a saved trip
+  if (viewingTrip) {
+    const days = parseDays(viewingTrip.itinerary);
+    return (
+      <div style={{ maxWidth: 640, margin: "0 auto", fontFamily: "Georgia, serif", padding: "0 0 2rem" }}>
+        <div style={{ padding: "1.5rem 0 1rem", borderBottom: "1px solid #e5e7eb", marginBottom: "1.5rem" }}>
+          <button onClick={() => setViewingTrip(null)} style={{ ...btnS, fontSize: 13, padding: "6px 14px", marginBottom: 12, fontFamily: "sans-serif" }}>← Back to history</button>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: 0 }}>🗺️ {viewingTrip.start} → {viewingTrip.end}</h1>
+          <p style={{ fontSize: 14, color: gray, marginTop: 4, fontFamily: "sans-serif" }}>Saved on {viewingTrip.date}{viewingTrip.depart ? ` · Departing ${viewingTrip.depart}` : ""}</p>
+        </div>
+        {days.map((day, i) => (
+          <div key={i} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1rem" }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: "0.6rem" }}>{day.title}</div>
+            <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8, fontFamily: "sans-serif" }}>
+              {day.lines.map((line, j) => <div key={j} dangerouslySetInnerHTML={{ __html: formatLine(line) }} />)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // History view
+  if (showHistory) {
+    return (
+      <div style={{ maxWidth: 640, margin: "0 auto", fontFamily: "sans-serif", padding: "0 0 2rem" }}>
+        <div style={{ padding: "1.5rem 0 1rem", borderBottom: "1px solid #e5e7eb", marginBottom: "1.5rem" }}>
+          <button onClick={() => setShowHistory(false)} style={{ ...btnS, fontSize: 13, padding: "6px 14px", marginBottom: 12 }}>← Back</button>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: 0 }}>🗺️ My Saved Trips</h1>
+          <p style={{ fontSize: 14, color: gray, marginTop: 4 }}>Your recent road trip itineraries</p>
+        </div>
+        {tripHistory.length === 0 && (
+          <div style={{ textAlign: "center", padding: "3rem 1rem", color: gray }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🚗</div>
+            <p>No saved trips yet — plan your first one!</p>
+            <button style={{ ...btnP, marginTop: 16 }} onClick={() => setShowHistory(false)}>Plan a trip</button>
+          </div>
+        )}
+        {tripHistory.map(trip => (
+          <div key={trip.id} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div onClick={() => setViewingTrip(trip)} style={{ cursor: "pointer", flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#111" }}>{trip.start} → {trip.end}</div>
+              <div style={{ fontSize: 12, color: gray, marginTop: 4, display: "flex", gap: 10 }}>
+                <span>📅 {trip.date}</span>
+                {trip.vehicle && <span>🚗 {trip.vehicle}</span>}
+                {trip.withKids ? <span>👨‍👩‍👧‍👦 With kids</span> : <span>🧑‍🤝‍🧑 Adults</span>}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+              <button onClick={() => setViewingTrip(trip)} style={{ ...btnP, fontSize: 12, padding: "6px 14px" }}>View</button>
+              <button onClick={() => deleteTrip(trip.id)} style={{ ...btnS, fontSize: 12, padding: "6px 14px", color: "#dc2626", borderColor: "#fca5a5" }}>Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", fontFamily: "sans-serif", padding: "0 0 2rem" }}>
       <div style={{ padding: "1.5rem 0 1rem", borderBottom: "1px solid #e5e7eb", marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: 0 }}>Road Trip Planner</h1>
-        <p style={{ fontSize: 14, color: gray, marginTop: 4 }}>Tell us about your trip and we'll build the perfect itinerary</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: 0 }}>Road Trip Planner</h1>
+            <p style={{ fontSize: 14, color: gray, marginTop: 4 }}>Tell us about your trip and we'll build the perfect itinerary</p>
+          </div>
+          {tripHistory.length > 0 && (
+            <button onClick={() => setShowHistory(true)} style={{ ...btnS, fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap" }}>
+              🗺️ My trips ({tripHistory.length})
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: "1.5rem" }}>
