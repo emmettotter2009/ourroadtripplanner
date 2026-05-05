@@ -83,7 +83,7 @@ export default function Home() {
           Trip drafts and history are saved locally in your browser — nothing is stored on our servers.
         </div>
         <div style={{ fontSize: 10, color: "#3a3a38", marginTop: 8 }}>
-          Header photo by Harley-Davidson via Unsplash
+          Header photo by Diego Jimenez via Unsplash
         </div>
       </div>
     </main>
