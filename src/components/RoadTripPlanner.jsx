@@ -385,6 +385,12 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
     const stillWriting = loading === false && itinerary.length > 0 && !itinerary.match(/traveler tip|parent tip/i);
     return (
       <div style={{ maxWidth: 640, margin: "0 auto", fontFamily: "Georgia, serif", padding: "0 0 2rem" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8, fontFamily: "sans-serif" }}>
+          <button onClick={() => { setItinerary(null); setStep(0); setMarkers(null); setScenic(null); setEmailSent(false); setShowEmailForm(false); setChatMessages([]); setShowChat(false); clearDraft(); }}
+            style={{ fontSize: 13, color: "#6b7280", background: "white", border: "1px solid #d1d5db", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+            ← Plan a new trip
+          </button>
+        </div>
         <div style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)", borderRadius: 16, padding: "1.5rem", marginBottom: "1.5rem", color: "white" }}>
           <div style={{ fontSize: 12, fontFamily: "sans-serif", opacity: 0.8, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Your Road Trip Itinerary</div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "white", margin: "0 0 4px 0", fontFamily: "Georgia, serif" }}>🗺️ {form.start} → {form.end}</h1>
@@ -399,7 +405,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
         <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap", fontFamily: "sans-serif" }}>
           <button onClick={() => setShowEmailForm(v => !v)} style={{ ...btnS, fontSize: 13, padding: "7px 16px" }}>📧 Email my itinerary</button>
           {emailSent && <span style={{ fontSize: 13, color: green, alignSelf: "center" }}>✓ Sent!</span>}
-          <button onClick={downloadPDF} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#dc2626", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>
+          <button onClick={downloadPDF} title="Allow pop-ups if nothing opens" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#dc2626", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>
             📄 PDF
           </button>
           <div style={{ position: "relative" }}>
