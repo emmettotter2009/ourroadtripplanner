@@ -13,9 +13,11 @@ const Tag = ({ label, selected, onClick }) => (
   }}>{label}</button>
 );
 
-const Field = ({ label, children }) => (
+const Field = ({ label, children, required }) => (
   <div style={{ marginBottom: 18 }}>
-    <label style={{ fontSize: 13, color: "#6b7280", display: "block", marginBottom: 6 }}>{label}</label>
+    <label style={{ fontSize: 13, color: "#6b7280", display: "block", marginBottom: 6 }}>
+      {label}{required && <span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>}
+    </label>
     {children}
   </div>
 );
@@ -717,8 +719,8 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
       {step === 0 && (
         <div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-            <Field label="Starting city"><input style={inputStyle} value={form.start} onChange={e => upd("start", e.target.value)} placeholder="e.g. Phoenix, AZ" /></Field>
-            <Field label="Destination"><input style={inputStyle} value={form.end} onChange={e => upd("end", e.target.value)} placeholder="e.g. Grand Canyon Village" /></Field>
+            <Field label="Starting city" required><input style={inputStyle} value={form.start} onChange={e => upd("start", e.target.value)} placeholder="e.g. Phoenix, AZ" /></Field>
+            <Field label="Destination" required><input style={inputStyle} value={form.end} onChange={e => upd("end", e.target.value)} placeholder="e.g. Grand Canyon Village" /></Field>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
             <Field label="Departure date"><input style={inputStyle} type="date" value={form.depart} onChange={e => upd("depart", e.target.value)} /></Field>
@@ -726,6 +728,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
             <Field label="Return date (optional)"><input style={inputStyle} type="date" value={form.ret} onChange={e => upd("ret", e.target.value)} /></Field>
           </div>
           <Field label="Must-see stops or detours?"><input style={inputStyle} value={form.stops} onChange={e => upd("stops", e.target.value)} placeholder="e.g. Sedona, Meteor Crater" /></Field>
+          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: -8, fontFamily: "sans-serif" }}><span style={{ color: "#dc2626" }}>*</span> Required fields</p>
           <Field label="Vehicle type">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {[{v:"motorcycle",l:"🏍️ Motorcycle"},{v:"2WD",l:"🚗 Car / 2WD"},{v:"AWD/4WD",l:"🚙 SUV / AWD / 4WD"},{v:"electric vehicle",l:"⚡ Electric Vehicle"},{v:"RV or camper van",l:"🚐 RV / Camper Van"},{v:"truck",l:"🛻 Truck"}].map(({v,l}) => (
@@ -793,9 +796,9 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
               ))}
             </div>
           </Field>
-          <Field label="Food preferences">
+          <Field label="Food preferences (US chains listed — select what applies to your region)">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["McDonald's","Chick-fil-A","Subway","Cracker Barrel","Panera","Any fast food","Local spots","Packed lunches","Sit-down dinners","Wineries & breweries"].map(v => (
+              {["Local restaurants & diners","Any fast food","Packed lunches from a cooler","Sit-down dinners","Wineries & breweries","Subway","McDonald's","Chick-fil-A","Cracker Barrel","Panera"].map(v => (
                 <Tag key={v} label={v} selected={form.food.includes(v)} onClick={() => toggleArr("food", v)} />
               ))}
             </div>
