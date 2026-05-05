@@ -158,6 +158,7 @@ For EACH day include:
 - One traveler tip
 ${form.vehicle === "motorcycle" ? "- Weather and road surface warnings for motorcycles" : ""}
 ${form.vehicle === "2WD" ? "- Flag roads requiring AWD or problematic for 2WD" : ""}
+${form.vehicle === "electric vehicle" ? "- Suggest Tesla Supercharger or ChargePoint/EVgo charging stops along the route, note estimated range between charges, and flag any legs with limited charging infrastructure" : ""}
 
 Use real town names and businesses. Start directly with Day 1.`;
   };
@@ -635,7 +636,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           <Field label="Must-see stops or detours?"><input style={inputStyle} value={form.stops} onChange={e => upd("stops", e.target.value)} placeholder="e.g. Sedona, Meteor Crater" /></Field>
           <Field label="Vehicle type">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {[{v:"motorcycle",l:"🏍️ Motorcycle"},{v:"2WD",l:"🚗 Car / 2WD"},{v:"AWD/4WD",l:"🚙 SUV / AWD / 4WD"},{v:"RV or camper van",l:"🚐 RV / Camper Van"},{v:"truck",l:"🛻 Truck"}].map(({v,l}) => (
+              {[{v:"motorcycle",l:"🏍️ Motorcycle"},{v:"2WD",l:"🚗 Car / 2WD"},{v:"AWD/4WD",l:"🚙 SUV / AWD / 4WD"},{v:"electric vehicle",l:"⚡ Electric Vehicle"},{v:"RV or camper van",l:"🚐 RV / Camper Van"},{v:"truck",l:"🛻 Truck"}].map(({v,l}) => (
                 <Tag key={v} label={l} selected={form.vehicle === v} onClick={() => upd("vehicle", form.vehicle === v ? "" : v)} />
               ))}
             </div>
