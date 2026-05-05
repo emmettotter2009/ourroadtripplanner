@@ -54,6 +54,7 @@ export default function RoadTripPlanner() {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showNavDropdown, setShowNavDropdown] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -65,6 +66,12 @@ export default function RoadTripPlanner() {
       if (saved) setForm(JSON.parse(saved));
       const history = localStorage.getItem("roadtrip_history");
       if (history) setTripHistory(JSON.parse(history));
+      // Learn default starting city from past trips
+      const cityData = JSON.parse(localStorage.getItem("roadtrip_cities") || "{}");
+      const topCity = Object.entries(cityData).sort((a,b) => b[1]-a[1])[0];
+      if (topCity && topCity[1] >= 2) {
+        setForm(f => ({ ...f, start: f.start || topCity[0] }));
+      }
     } catch(e) {}
   }, []);
 
@@ -99,6 +106,12 @@ export default function RoadTripPlanner() {
       const updated = [trip, ...existing].slice(0, 20);
       localStorage.setItem("roadtrip_history", JSON.stringify(updated));
       setTripHistory(updated);
+      // Track starting city frequency
+      if (form.start) {
+        const cities = JSON.parse(localStorage.getItem("roadtrip_cities") || "{}");
+        cities[form.start] = (cities[form.start] || 0) + 1;
+        localStorage.setItem("roadtrip_cities", JSON.stringify(cities));
+      }
     } catch(e) {}
   };
 
@@ -387,35 +400,35 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           <button onClick={() => setShowEmailForm(v => !v)} style={{ ...btnS, fontSize: 13, padding: "7px 16px" }}>📧 Email my itinerary</button>
           {emailSent && <span style={{ fontSize: 13, color: green, alignSelf: "center" }}>✓ Sent!</span>}
           <button onClick={downloadPDF} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#dc2626", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>
-            📄 Download PDF
+            📄 PDF
           </button>
-          <a
-            href={`https://www.google.com/maps/dir/${encodeURIComponent(form.start)}/${form.stops ? encodeURIComponent(form.stops) + '/' : ''}${encodeURIComponent(form.end)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#4285F4", color: "white", border: "none", borderRadius: 8, textDecoration: "none", fontWeight: 500 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            Google Maps
-          </a>
-          <a
-            href={`https://waze.com/ul?q=${encodeURIComponent(form.end)}&navigate=yes`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#33CCFF", color: "white", border: "none", borderRadius: 8, textDecoration: "none", fontWeight: 500 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2a9.93 9.93 0 0 0-7 2.91A9.94 9.94 0 0 0 2 12c0 2.73 1.1 5.24 2.93 7.07A10 10 0 0 0 12 22a10 10 0 0 0 10-10A10 10 0 0 0 12 2zm1 17.93V18h-2v1.93A8.01 8.01 0 0 1 4.07 13H6v-2H4.07A8.01 8.01 0 0 1 11 4.07V6h2V4.07A8.01 8.01 0 0 1 19.93 11H18v2h1.93A8.01 8.01 0 0 1 13 19.93z"/></svg>
-            Waze
-          </a>
-          <a
-            href={`https://maps.apple.com/?saddr=${encodeURIComponent(form.start)}&daddr=${encodeURIComponent(form.end)}${form.stops ? `&waypoints=${encodeURIComponent(form.stops)}` : ""}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#000000", color: "white", border: "none", borderRadius: 8, textDecoration: "none", fontWeight: 500 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            Apple Maps
-          </a>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowNavDropdown(v => !v)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#111", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}
+            >
+              🗺️ Navigate {showNavDropdown ? "▲" : "▾"}
+            </button>
+            {showNavDropdown && (
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180, zIndex: 100, overflow: "hidden" }}>
+                {[
+                  { label: "Google Maps", color: "#4285F4", href: `https://www.google.com/maps/dir/${encodeURIComponent(form.start)}/${form.stops ? encodeURIComponent(form.stops) + '/' : ''}${encodeURIComponent(form.end)}` },
+                  { label: "Waze", color: "#33CCFF", href: `https://waze.com/ul?q=${encodeURIComponent(form.end)}&navigate=yes` },
+                  { label: "Apple Maps", color: "#000", href: `https://maps.apple.com/?saddr=${encodeURIComponent(form.start)}&daddr=${encodeURIComponent(form.end)}` },
+                ].map(({ label, color, href }) => (
+                  <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+                    onClick={() => setShowNavDropdown(false)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", fontSize: 13, color: "#374151", textDecoration: "none", borderBottom: "0.5px solid #f3f4f6", fontFamily: "sans-serif" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                    onMouseLeave={e => e.currentTarget.style.background = "white"}
+                  >
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    {label}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {showEmailForm && (
