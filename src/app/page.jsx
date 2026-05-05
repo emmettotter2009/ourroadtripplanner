@@ -40,7 +40,7 @@ export default function Home() {
             EVERY ROAD · YOUR WAY
           </div>
           <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "sans-serif", marginTop: 6, maxWidth: 400 }}>
-            AI-powered itineraries built around your family's real needs
+            AI-powered itineraries built around your real needs
           </div>
         </div>
       </div>
