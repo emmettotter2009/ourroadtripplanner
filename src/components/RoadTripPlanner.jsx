@@ -320,9 +320,28 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           </div>
         </div>
 
+        {/* Action buttons */}
         <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap", fontFamily: "sans-serif" }}>
           <button onClick={() => setShowEmailForm(v => !v)} style={{ ...btnS, fontSize: 13, padding: "7px 16px" }}>📧 Email my itinerary</button>
-          {emailSent && <span style={{ fontSize: 13, color: green, alignSelf: "center" }}>✓ Sent to your inbox!</span>}
+          {emailSent && <span style={{ fontSize: 13, color: green, alignSelf: "center" }}>✓ Sent!</span>}
+          <a
+            href={`https://www.google.com/maps/dir/${encodeURIComponent(form.start)}/${form.stops ? encodeURIComponent(form.stops) + '/' : ''}${encodeURIComponent(form.end)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#4285F4", color: "white", border: "none", borderRadius: 8, textDecoration: "none", fontWeight: 500 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            Google Maps
+          </a>
+          <a
+            href={`https://waze.com/ul?q=${encodeURIComponent(form.end)}&navigate=yes`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#33CCFF", color: "white", border: "none", borderRadius: 8, textDecoration: "none", fontWeight: 500 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2a9.93 9.93 0 0 0-7 2.91A9.94 9.94 0 0 0 2 12c0 2.73 1.1 5.24 2.93 7.07A10 10 0 0 0 12 22a10 10 0 0 0 10-10A10 10 0 0 0 12 2zm1 17.93V18h-2v1.93A8.01 8.01 0 0 1 4.07 13H6v-2H4.07A8.01 8.01 0 0 1 11 4.07V6h2V4.07A8.01 8.01 0 0 1 19.93 11H18v2h1.93A8.01 8.01 0 0 1 13 19.93z"/></svg>
+            Waze
+          </a>
         </div>
 
         {showEmailForm && (
