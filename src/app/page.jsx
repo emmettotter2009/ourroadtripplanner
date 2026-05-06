@@ -60,25 +60,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Feature cards */}
-      <div style={{ background: "white", borderBottom: "1px solid #e5e7eb", padding: "1.25rem 1rem" }}>
-        <div style={{ maxWidth: 680, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-          {[
-            { icon: "🗺️", title: "Smart Routes", desc: "Optimized paths with the right stops for your crew" },
-            { icon: "📋", title: "Custom Itineraries", desc: "Day-by-day plans tailored to your pace and preferences" },
-            { icon: "🚗", title: "Built For Real Life", desc: "Driving limits, meal times, and real-world constraints" },
-          ].map(({ icon, title, desc }) => (
-            <div key={title} style={{ background: "#f8faff", border: "1px solid #e0e7ff", borderRadius: 12, padding: "1rem", display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>{icon}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1e3a5f", fontFamily: "sans-serif", marginBottom: 2 }}>{title}</div>
-                <div style={{ fontSize: 12, color: "#6b7280", fontFamily: "sans-serif", lineHeight: 1.5 }}>{desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Main content */}
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "2rem 1rem" }}>
         <RoadTripPlanner />
