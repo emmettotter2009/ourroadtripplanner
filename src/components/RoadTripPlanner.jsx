@@ -449,6 +449,12 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           </div>
         )}
 
+        {/* Restaurant disclaimer */}
+        <div style={{ background: "#FFF8E7", border: "1px solid #F5E6B8", borderRadius: 10, padding: "10px 14px", marginBottom: "1rem", fontFamily: "sans-serif", fontSize: 13, color: "#78570A", display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>🍽️</span>
+          <span><strong>Restaurant tip:</strong> We recommend specific spots to give you a great starting point — always check Google Maps or Yelp to confirm hours and availability before you go. Things change!</span>
+        </div>
+
         {days.map((day, i) => {
           const driveMatch = day.lines.join(" ").match(/(\d+(\.\d+)?(\.5)?\s*([-–]\s*\d+(\.\d+)?)?\s*hours?)/i);
           const driveTime = driveMatch ? driveMatch[1] : null;
