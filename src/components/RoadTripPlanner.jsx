@@ -175,7 +175,16 @@ ${form.vehicle === "motorcycle" ? "- Weather and road surface warnings for motor
 ${form.vehicle === "2WD" ? "- Flag roads requiring AWD or problematic for 2WD" : ""}
 ${form.vehicle === "electric vehicle" ? "- Suggest Tesla Supercharger or ChargePoint/EVgo charging stops along the route, note estimated range between charges, and flag any legs with limited charging infrastructure" : ""}
 
-Use real town names and businesses. Start directly with Day 1.`;
+Use real town names and businesses. Start directly with Day 1.
+
+FORMATTING RULES — follow exactly:
+- Start each day with: "Day X: [Title]" on its own line
+- Use "8:00 AM - " format for times (always include AM/PM)
+- Do NOT use ### or ## or # markdown headers anywhere
+- Do NOT use bullet points with * or -
+- Label traveler tips as: "Traveler Tip: [text]"
+- Keep each item on its own line
+- Use plain text only, no markdown formatting symbols`;
   };
 
   const generate = async () => {
@@ -332,10 +341,21 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
     for (const line of lines) {
       const t = line.trim();
       if (!t) continue;
+      // Skip pure markdown headers that aren't day titles
+      if (/^###\s*(Schedule|Accommodation|Activities|Traveler Tip|Trip Summary)/i.test(t)) continue;
+      if (/^#{1,3}\s*$/.test(t)) continue;
       if (/^(#{1,3}\s*)?(Day\s+\d+)/i.test(t)) {
         if (cur) days.push(cur);
-        cur = { title: t.replace(/^#+\s*/, "").replace(/\*\*/g, ""), lines: [] };
-      } else if (cur) cur.lines.push(t);
+        cur = { title: t.replace(/^#+\s*/, "").replace(/\*\*/g, "").replace(/^-+\s*/, "").trim(), lines: [] };
+      } else if (cur) {
+        // Clean the line before adding
+        const cleaned = t
+          .replace(/^#{1,3}\s*/, "")      // Remove markdown headers
+          .replace(/^-\s+/, "")           // Remove leading dashes
+          .replace(/^\*\s+/, "")          // Remove leading asterisks
+          .trim();
+        if (cleaned) cur.lines.push(cleaned);
+      }
     }
     if (cur) days.push(cur);
     return days.length ? days : [{ title: "Your Itinerary", lines: text.split("\n").filter(Boolean) }];
