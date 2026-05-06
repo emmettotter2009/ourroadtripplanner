@@ -460,29 +460,99 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           const driveTime = driveMatch ? driveMatch[1] : null;
           const colors = ["#2563eb","#059669","#7c3aed","#d97706","#dc2626","#0891b2","#65a30d"];
           const color = colors[i % colors.length];
+
+          // Parse timeline items from lines
+          const timeRegex = /^(\d+:\d+\s*(AM|PM))/i;
+          const tipRegex = /traveler tip|parent tip/i;
+
+          const getIcon = (line) => {
+            if (/breakfast|coffee|cafe/i.test(line)) return { icon: "☕", bg: "#FEF3C7" };
+            if (/lunch/i.test(line)) return { icon: "🥪", bg: "#D1FAE5" };
+            if (/dinner/i.test(line)) return { icon: "🍽️", bg: "#FCE7F3" };
+            if (/hotel|check.in|lodge|inn|marriott|hilton|hyatt/i.test(line)) return { icon: "🏨", bg: "#DBEAFE" };
+            if (/camp/i.test(line)) return { icon: "⛺", bg: "#D1FAE5" };
+            if (/depart|leave|start/i.test(line)) return { icon: "🚗", bg: "#E0E7FF" };
+            if (/arrive|reach/i.test(line)) return { icon: "📍", bg: "#FEE2E2" };
+            if (/museum|historic|monument|park|visit/i.test(line)) return { icon: "🏛️", bg: "#F3E8FF" };
+            if (/hike|trail|walk/i.test(line)) return { icon: "🥾", bg: "#D1FAE5" };
+            return { icon: "📍", bg: "#F3F4F6" };
+          };
+
           return (
             <div key={i} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, marginBottom: "1rem", overflow: "hidden" }}>
-              <div style={{ background: color, padding: "0.75rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {/* Day header */}
+              <div style={{ background: color, padding: "0.85rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "Georgia, serif" }}>{day.title}</div>
-                {driveTime && <span style={{ fontSize: 12, background: "rgba(255,255,255,0.25)", color: "white", padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap" }}>🚗 {driveTime}</span>}
+                {driveTime && <span style={{ fontSize: 12, background: "rgba(255,255,255,0.25)", color: "white", padding: "3px 12px", borderRadius: 20, whiteSpace: "nowrap" }}>🚗 {driveTime}</span>}
               </div>
-              <div style={{ padding: "1rem 1.25rem" }}>
-                {day.lines.map((line, j) => {
-                  const isTip = /traveler tip|parent tip/i.test(line);
-                  const isTime = /^\d+:\d+/.test(line.trim());
-                  return (
-                    <div key={j} style={{
-                      fontSize: 13, color: isTip ? "#92400e" : "#374151",
-                      lineHeight: 1.8, fontFamily: "sans-serif",
-                      background: isTip ? "#fffbeb" : "transparent",
-                      borderLeft: isTip ? "3px solid #f59e0b" : "none",
-                      padding: isTip ? "4px 10px" : "0",
-                      margin: isTip ? "6px 0" : "0",
-                      borderRadius: isTip ? "0 6px 6px 0" : "0",
-                      fontWeight: isTime ? 500 : 400,
-                    }} dangerouslySetInnerHTML={{ __html: formatLine(line) }} />
-                  );
-                })}
+              {/* Timeline body */}
+              <div style={{ padding: "1rem 1.25rem", fontFamily: "sans-serif" }}>
+                {(() => {
+                  const items = [];
+                  let currentTime = null;
+                  let currentLines = [];
+
+                  const flush = () => {
+                    if (currentLines.length > 0) {
+                      items.push({ time: currentTime, lines: [...currentLines] });
+                      currentLines = [];
+                      currentTime = null;
+                    }
+                  };
+
+                  day.lines.forEach(line => {
+                    const timeMatch = line.match(/^(\d+:\d+\s*(AM|PM))/i);
+                    if (timeMatch) {
+                      flush();
+                      currentTime = timeMatch[1];
+                      const rest = line.replace(timeMatch[0], "").replace(/^[\s\-–:]+/, "").trim();
+                      if (rest) currentLines.push(rest);
+                    } else if (tipRegex.test(line)) {
+                      flush();
+                      items.push({ isTip: true, lines: [line] });
+                    } else if (line.trim()) {
+                      currentLines.push(line);
+                    }
+                  });
+                  flush();
+
+                  return items.map((item, idx) => {
+                    if (item.isTip) {
+                      return (
+                        <div key={idx} style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", margin: "12px 0", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+                          <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: formatLine(item.lines[0]) }} />
+                        </div>
+                      );
+                    }
+
+                    const mainLine = item.lines[0] || "";
+                    const subLines = item.lines.slice(1);
+                    const { icon, bg } = getIcon(mainLine);
+
+                    return (
+                      <div key={idx} style={{ display: "flex", gap: 12, marginBottom: 4 }}>
+                        {/* Left: time + connector */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 56 }}>
+                          {item.time && (
+                            <div style={{ fontSize: 11, fontWeight: 600, color: color, whiteSpace: "nowrap", marginBottom: 4 }}>{item.time}</div>
+                          )}
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{icon}</div>
+                          {idx < items.length - 1 && !items[idx].isTip && (
+                            <div style={{ width: 2, flex: 1, background: "#e5e7eb", minHeight: 16, marginTop: 4 }} />
+                          )}
+                        </div>
+                        {/* Right: content */}
+                        <div style={{ paddingBottom: 16, flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#111", lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: formatLine(mainLine) }} />
+                          {subLines.map((sub, si) => (
+                            <div key={si} style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: formatLine(sub) }} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           );
@@ -715,10 +785,26 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: "1.5rem" }}>
-        {STEPS.map((s, i) => <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < step ? green : i === step ? blue : "#e5e7eb", transition: "background 0.3s" }} />)}
+      {/* Numbered step navigation */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: "1.5rem" }}>
+        {STEPS.map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : "none" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 700, fontFamily: "sans-serif",
+                background: i < step ? green : i === step ? blue : "#e5e7eb",
+                color: i <= step ? "white" : "#9ca3af",
+                transition: "all 0.3s", flexShrink: 0,
+              }}>{i < step ? "✓" : i + 1}</div>
+              <div style={{ fontSize: 10, color: i === step ? blue : i < step ? green : "#9ca3af", fontFamily: "sans-serif", whiteSpace: "nowrap", fontWeight: i === step ? 600 : 400 }}>{s}</div>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div style={{ flex: 1, height: 2, background: i < step ? green : "#e5e7eb", margin: "0 6px", marginBottom: 16, transition: "background 0.3s" }} />
+            )}
+          </div>
+        ))}
       </div>
-      <div style={{ fontSize: 12, color: gray, marginBottom: "1.25rem" }}>Step {step + 1} of {STEPS.length}: <strong>{STEPS[step]}</strong></div>
 
       {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 13, color: "#991b1b", marginBottom: 16 }}>{error}</div>}
 
@@ -736,9 +822,24 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           <Field label="Must-see stops or detours?"><input style={inputStyle} value={form.stops} onChange={e => upd("stops", e.target.value)} placeholder="e.g. Sedona, Meteor Crater" /></Field>
           <p style={{ fontSize: 11, color: "#9ca3af", marginTop: -8, fontFamily: "sans-serif" }}><span style={{ color: "#dc2626" }}>*</span> Required fields</p>
           <Field label="Vehicle type">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {[{v:"motorcycle",l:"🏍️ Motorcycle"},{v:"2WD",l:"🚗 Car / 2WD"},{v:"AWD/4WD",l:"🚙 SUV / AWD / 4WD"},{v:"electric vehicle",l:"⚡ Electric Vehicle"},{v:"RV or camper van",l:"🚐 RV / Camper Van"},{v:"truck",l:"🛻 Truck"}].map(({v,l}) => (
-                <Tag key={v} label={l} selected={form.vehicle === v} onClick={() => upd("vehicle", form.vehicle === v ? "" : v)} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8 }}>
+              {[
+                {v:"motorcycle", icon:"🏍️", l:"Motorcycle"},
+                {v:"2WD", icon:"🚗", l:"Car / 2WD"},
+                {v:"AWD/4WD", icon:"🚙", l:"SUV / AWD"},
+                {v:"electric vehicle", icon:"⚡", l:"Electric"},
+                {v:"RV or camper van", icon:"🚐", l:"RV / Van"},
+                {v:"truck", icon:"🛻", l:"Truck"},
+              ].map(({v, icon, l}) => (
+                <button key={v} onClick={() => upd("vehicle", form.vehicle === v ? "" : v)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 6, padding: "12px 8px", border: form.vehicle === v ? "2px solid #2563eb" : "1px solid #d1d5db",
+                  borderRadius: 10, background: form.vehicle === v ? "#dbeafe" : "white",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                }}>
+                  <span style={{ fontSize: 24 }}>{icon}</span>
+                  <span style={{ fontSize: 12, color: form.vehicle === v ? "#1e40af" : "#374151", fontWeight: form.vehicle === v ? 600 : 400 }}>{l}</span>
+                </button>
               ))}
             </div>
           </Field>
@@ -748,9 +849,21 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
       {step === 1 && (
         <div>
           <Field label="Who's coming?">
-            <div style={{ display: "flex", gap: 8 }}>
-              <Tag label="👨‍👩‍👧‍👦 Traveling with kids" selected={form.withKids} onClick={() => upd("withKids", true)} />
-              <Tag label="🧑‍🤝‍🧑 Adults only" selected={!form.withKids} onClick={() => upd("withKids", false)} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {[
+                {label: "Traveling with kids", icon: "👨‍👩‍👧‍👦", val: true},
+                {label: "Adults only", icon: "🧑‍🤝‍🧑", val: false},
+              ].map(({label, icon, val}) => (
+                <button key={label} onClick={() => upd("withKids", val)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 6, padding: "16px 8px", border: form.withKids === val ? "2px solid #2563eb" : "1px solid #d1d5db",
+                  borderRadius: 10, background: form.withKids === val ? "#dbeafe" : "white",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                }}>
+                  <span style={{ fontSize: 28 }}>{icon}</span>
+                  <span style={{ fontSize: 13, color: form.withKids === val ? "#1e40af" : "#374151", fontWeight: form.withKids === val ? 600 : 400 }}>{label}</span>
+                </button>
+              ))}
             </div>
           </Field>
           {form.withKids && (
@@ -783,11 +896,35 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
             <input type="range" min="4" max="12" step="0.5" value={form.driveMax} onChange={e => upd("driveMax", parseFloat(e.target.value))} style={{ width: "100%" }} />
           </Field>
           <Field label="Travel considerations">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
               {(form.withKids
-                ? ["motion sickness","frequent bathroom breaks","restless kids","baby or toddler","traveling with a pet"]
-                : ["traveling with a pet","mobility considerations","prefer avoiding highways","large group","first time on this route"]
-              ).map(v => <Tag key={v} label={v} selected={form.considerations.includes(v)} onClick={() => toggleArr("considerations", v)} />)}
+                ? [
+                    {v:"motion sickness", icon:"🤢"},
+                    {v:"frequent bathroom breaks", icon:"🚻"},
+                    {v:"restless kids", icon:"😤"},
+                    {v:"baby or toddler", icon:"👶"},
+                    {v:"traveling with a pet", icon:"🐾"},
+                    {v:"allergies or medical needs", icon:"💊"},
+                  ]
+                : [
+                    {v:"traveling with a pet", icon:"🐾"},
+                    {v:"mobility considerations", icon:"♿"},
+                    {v:"prefer avoiding highways", icon:"🛣️"},
+                    {v:"large group", icon:"👥"},
+                    {v:"first time on this route", icon:"🗺️"},
+                    {v:"allergies or medical needs", icon:"💊"},
+                  ]
+              ).map(({v, icon}) => (
+                <button key={v} onClick={() => toggleArr("considerations", v)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 6, padding: "12px 8px", border: form.considerations.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
+                  borderRadius: 10, background: form.considerations.includes(v) ? "#dbeafe" : "white",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
+                }}>
+                  <span style={{ fontSize: 22 }}>{icon}</span>
+                  <span style={{ fontSize: 11, color: form.considerations.includes(v) ? "#1e40af" : "#374151", fontWeight: form.considerations.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{v}</span>
+                </button>
+              ))}
             </div>
           </Field>
         </div>
@@ -796,18 +933,60 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
       {step === 2 && (
         <div>
           <Field label="Where do you want to sleep?">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["🏕️ Tent camping","🚐 RV / camper hookups","✨ Glamping","🏨 Mix of camping & hotels","🏨 Hotel / Motel - No Preference","Marriott","Hilton","Hyatt","IHG / Holiday Inn","Best Western","Hampton Inn","Must have pool","Pet-friendly"].map(v => (
-                <Tag key={v} label={v} selected={form.accommodation.includes(v)} onClick={() => toggleArr("accommodation", v)} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+              {[
+                {v:"🏕️ Tent camping", icon:"🏕️", l:"Tent Camping"},
+                {v:"🚐 RV / camper hookups", icon:"🚐", l:"RV / Camper"},
+                {v:"✨ Glamping", icon:"✨", l:"Glamping"},
+                {v:"🏨 Mix of camping & hotels", icon:"🔀", l:"Mix It Up"},
+                {v:"🏨 Hotel / Motel - No Preference", icon:"🏨", l:"Any Hotel"},
+                {v:"Marriott", icon:"⭐", l:"Marriott"},
+                {v:"Hilton", icon:"⭐", l:"Hilton"},
+                {v:"Hyatt", icon:"⭐", l:"Hyatt"},
+                {v:"IHG / Holiday Inn", icon:"⭐", l:"IHG / Holiday Inn"},
+                {v:"Best Western", icon:"⭐", l:"Best Western"},
+                {v:"Hampton Inn", icon:"⭐", l:"Hampton Inn"},
+                {v:"Must have pool", icon:"🏊", l:"Must Have Pool"},
+                {v:"Pet-friendly", icon:"🐾", l:"Pet Friendly"},
+              ].map(({v, icon, l}) => (
+                <button key={v} onClick={() => toggleArr("accommodation", v)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 6, padding: "12px 8px", border: form.accommodation.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
+                  borderRadius: 10, background: form.accommodation.includes(v) ? "#dbeafe" : "white",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
+                }}>
+                  <span style={{ fontSize: 22 }}>{icon}</span>
+                  <span style={{ fontSize: 11, color: form.accommodation.includes(v) ? "#1e40af" : "#374151", fontWeight: form.accommodation.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{l}</span>
+                </button>
               ))}
             </div>
           </Field>
-          <Field label="Food preferences (US chains listed — select what applies to your region)">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["Local restaurants & diners","Any fast food","Packed lunches from a cooler","Sit-down dinners","Wineries & breweries","Subway","McDonald's","Chick-fil-A","Cracker Barrel","Panera"].map(v => (
-                <Tag key={v} label={v} selected={form.food.includes(v)} onClick={() => toggleArr("food", v)} />
+          <Field label="Food preferences">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+              {[
+                {v:"Local restaurants & diners", icon:"🍴", l:"Local Spots"},
+                {v:"Any fast food", icon:"🍔", l:"Fast Food"},
+                {v:"Packed lunches from a cooler", icon:"🧺", l:"Packed Lunches"},
+                {v:"Sit-down dinners", icon:"🍽️", l:"Sit-Down Dinners"},
+                {v:"Wineries & breweries", icon:"🍷", l:"Wineries & Breweries"},
+                {v:"Subway", icon:"🥖", l:"Subway"},
+                {v:"McDonald's", icon:"🍟", l:"McDonald's"},
+                {v:"Chick-fil-A", icon:"🐔", l:"Chick-fil-A"},
+                {v:"Cracker Barrel", icon:"🪑", l:"Cracker Barrel"},
+                {v:"Panera", icon:"🥐", l:"Panera"},
+              ].map(({v, icon, l}) => (
+                <button key={v} onClick={() => toggleArr("food", v)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 6, padding: "12px 8px", border: form.food.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
+                  borderRadius: 10, background: form.food.includes(v) ? "#dbeafe" : "white",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
+                }}>
+                  <span style={{ fontSize: 22 }}>{icon}</span>
+                  <span style={{ fontSize: 11, color: form.food.includes(v) ? "#1e40af" : "#374151", fontWeight: form.food.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{l}</span>
+                </button>
               ))}
             </div>
+            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 8, fontFamily: "sans-serif" }}>US chains listed — select what applies to your region</p>
           </Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             <Field label="Breakfast"><select style={inputStyle} value={form.breakfast} onChange={e => upd("breakfast", e.target.value)}>{["7:00 AM","7:30 AM","8:00 AM","8:30 AM","9:00 AM"].map(t => <option key={t}>{t}</option>)}</select></Field>
@@ -820,15 +999,50 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
       {step === 3 && (
         <div>
           <Field label={form.withKids ? "What does your group love?" : "What are you into?"}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["Hiking & outdoors","National parks","History & museums","Quirky roadside stops","Wildlife & zoos","Science & space","Photography & scenic views","Off-roading & adventure",
-                ...(form.withKids ? ["Dinosaurs & fossils","Water parks"] : ["Wineries & breweries","Live music & nightlife","Fine dining","Spa & wellness"])
-              ].map(v => <Tag key={v} label={v} selected={form.interests.includes(v)} onClick={() => toggleArr("interests", v)} />)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+              {[
+                {v:"Hiking & outdoors", icon:"🥾"},
+                {v:"National parks", icon:"🏔️"},
+                {v:"History & museums", icon:"🏛️"},
+                {v:"Quirky roadside stops", icon:"🛸"},
+                {v:"Wildlife & zoos", icon:"🦁"},
+                {v:"Science & space", icon:"🔭"},
+                {v:"Photography & scenic views", icon:"📸"},
+                {v:"Off-roading & adventure", icon:"🤠"},
+                ...(form.withKids
+                  ? [{v:"Dinosaurs & fossils", icon:"🦕"},{v:"Water parks", icon:"💦"}]
+                  : [{v:"Wineries & breweries", icon:"🍷"},{v:"Live music & nightlife", icon:"🎵"},{v:"Fine dining", icon:"🍾"},{v:"Spa & wellness", icon:"🧖"}]
+                )
+              ].map(({v, icon}) => (
+                <button key={v} onClick={() => toggleArr("interests", v)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 6, padding: "12px 8px", border: form.interests.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
+                  borderRadius: 10, background: form.interests.includes(v) ? "#dbeafe" : "white",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
+                }}>
+                  <span style={{ fontSize: 22 }}>{icon}</span>
+                  <span style={{ fontSize: 11, color: form.interests.includes(v) ? "#1e40af" : "#374151", fontWeight: form.interests.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{v}</span>
+                </button>
+              ))}
             </div>
           </Field>
           <Field label="Budget vibe">
-            <div style={{ display: "flex", gap: 8 }}>
-              {["budget-friendly","moderate","splurge-worthy"].map(v => <Tag key={v} label={v} selected={form.budget === v} onClick={() => upd("budget", v)} />)}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {[
+                {v:"budget-friendly", icon:"💰", l:"Budget Friendly"},
+                {v:"moderate", icon:"💳", l:"Moderate"},
+                {v:"splurge-worthy", icon:"✨", l:"Splurge Worthy"},
+              ].map(({v, icon, l}) => (
+                <button key={v} onClick={() => upd("budget", v)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 6, padding: "14px 8px", border: form.budget === v ? "2px solid #2563eb" : "1px solid #d1d5db",
+                  borderRadius: 10, background: form.budget === v ? "#dbeafe" : "white",
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                }}>
+                  <span style={{ fontSize: 24 }}>{icon}</span>
+                  <span style={{ fontSize: 12, color: form.budget === v ? "#1e40af" : "#374151", fontWeight: form.budget === v ? 600 : 400 }}>{l}</span>
+                </button>
+              ))}
             </div>
           </Field>
           <Field label="Anything else?">
