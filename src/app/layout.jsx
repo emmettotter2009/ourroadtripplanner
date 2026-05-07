@@ -28,6 +28,13 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Road Trip Planner" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-3KW7DZZNPL"></script>
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-3KW7DZZNPL');
+        `}} />
       </head>
       <body style={{ margin: 0, padding: 0, fontFamily: "sans-serif", background: "#f9fafb" }}>
         {children}
