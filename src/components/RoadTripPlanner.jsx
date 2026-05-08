@@ -48,33 +48,43 @@ const buildGYGUrl = (city) => {
   return `https://www.getyourguide.com/s/?q=${q}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher`;
 };
 
-// Extract the overnight city from a day's title and lines
-const extractOvernightCity = (dayTitle, dayLines) => {
-  // 1. Only look in lines that explicitly mention accommodation/overnight
+// Extract the overnight city from a day's title, using form destinations as ground truth
+const extractOvernightCity = (dayTitle, dayLines, formStart, formEnd, formStops) => {
+  // Build a list of known cities from the user's trip inputs
+  const knownCities = [formEnd];
+  if (formStart) knownCities.push(formStart);
+  if (formStops) {
+    formStops.split(/[,;]/).forEach(s => { const t = s.trim(); if (t) knownCities.push(t); });
+  }
+
+  // 1. Check day title for "to [City]" pattern — match against known cities first
+  for (const city of knownCities) {
+    const cityBase = city.split(",")[0].trim(); // strip state e.g. "Phoenix, AZ" -> "Phoenix"
+    if (new RegExp(`to\\s+${cityBase}`, 'i').test(dayTitle)) return cityBase;
+  }
+
+  // 2. Check day title for any "to X" pattern (multi-word OK)
+  const toMatch = dayTitle.match(/\bto\s+((?:[A-Z][a-z]+\s*){1,3})(?:\s*[-–]|$)/);
+  if (toMatch && toMatch[1]) {
+    const candidate = toMatch[1].trim();
+    // Reject vague words like "the Rim", "a New"
+    if (!/^(the|a|an|our|your|this)\b/i.test(candidate)) return candidate;
+  }
+
+  // 3. Look in accommodation lines for "at [Property], [City]" comma pattern
   const accommodationLines = dayLines.filter(l =>
-    /check.?in|overnight|stay(?:ing)?|lodge|hotel|motel|inn|koa|rv park|campground|camp ground|accommodation/i.test(l)
+    /check.?in|overnight|lodge|hotel|motel|inn|koa|rv park|campground|accommodation/i.test(l)
   );
   for (const line of accommodationLines) {
-    // Match "at [Place Name], [City]" pattern — city follows a comma after property name
-    const commaCity = line.match(/,\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s*[-–(]|\s*$)/);
-    if (commaCity && commaCity[1] && !/^(the|this|our|your|a|an)$/i.test(commaCity[1])) {
+    // "Lodge Name, Sedona" or "RV Park, Flagstaff, AZ"
+    const commaCity = line.match(/,\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s*[,(]|\s*$)/);
+    if (commaCity && commaCity[1] && !/^(the|this|our|your|a|an|second|third)$/i.test(commaCity[1])) {
       return commaCity[1].trim();
     }
-    // Match "in [City]" where City is capitalized and not a business-like phrase
-    const inCity = line.match(/\bin\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s+(?:rv|koa|camp|lodge|hotel|park|inn|motel))?/);
-    if (inCity && inCity[1] && !/^(the|this|our|your|a|an)$/i.test(inCity[1])) {
-      return inCity[1].trim();
-    }
   }
-  // 2. Extract destination city from day title e.g. "Day 3: Sedona to Flagstaff - subtitle"
-  const toMatch = dayTitle.match(/to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s*[-–]|$)/);
-  if (toMatch && toMatch[1]) return toMatch[1].trim();
-  // 3. Extract first proper noun after colon in title e.g. "Day 1: Sedona Exploration Day"
-  const colonMatch = dayTitle.match(/:\s*([A-Z][a-z]+)/);
-  if (colonMatch && colonMatch[1] && !/^(The|A|An|Day|Your|Our)$/.test(colonMatch[1])) {
-    return colonMatch[1].trim();
-  }
-  return "";
+
+  // 4. Fall back to form.end city (strip state)
+  return formEnd ? formEnd.split(",")[0].trim() : "";
 };
 
 export default function RoadTripPlanner() {
@@ -514,7 +524,7 @@ CONFIDENCE RULES — follow exactly:
           const isCamping = form.accommodation.some(a => /camp|rv|glamp/i.test(a));
 
           // Extract overnight city for affiliate link
-          const overnightCity = extractOvernightCity(day.title, day.lines);
+          const overnightCity = extractOvernightCity(day.title, day.lines, form.start, form.end, form.stops);
           const hotelUrl = buildBookingUrl(overnightCity);
           const carUrl = buildBookingUrl(overnightCity, "cars");
 
@@ -606,13 +616,15 @@ CONFIDENCE RULES — follow exactly:
                   });
                 })()}
 
-                {/* Per-day affiliate links */}
+                {/* Per-day affiliate links — skip hotel on Day 1 (departure city) */}
                 {!isCamping && (
                   <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 10, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-                    <a href={hotelUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      🏨 Search hotels{overnightCity ? ` in ${overnightCity}` : ""}
-                    </a>
+                    {i > 0 && (
+                      <a href={hotelUrl} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        🏨 Search hotels{overnightCity ? ` in ${overnightCity}` : ""}
+                      </a>
+                    )}
                     <a href={buildGYGUrl(overnightCity)} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       🎟️ Things to do{overnightCity ? ` in ${overnightCity}` : ""}
