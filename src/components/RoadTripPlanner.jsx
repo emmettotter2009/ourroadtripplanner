@@ -31,6 +31,7 @@ const inputStyle = {
 const DRAFT_KEY = "roadtrip_draft";
 const AWIN_ID = "2880651";
 const AWIN_MID = "6776";
+const GYG_PARTNER_ID = "CKJU4TS";
 
 const buildBookingUrl = (city, type = "hotels") => {
   const base = "https://www.awin1.com/cread.php";
@@ -40,6 +41,11 @@ const buildBookingUrl = (city, type = "hotels") => {
   }
   const encoded = encodeURIComponent(city || "");
   return `${base}?${params}&ued=https%3A%2F%2Fwww.booking.com%2Fsearchresults.html%3Fss%3D${encoded}`;
+};
+
+const buildGYGUrl = (city) => {
+  const q = encodeURIComponent(city || "");
+  return `https://www.getyourguide.com/s/?q=${q}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher`;
 };
 
 // Extract the overnight city from a day's lines
@@ -600,6 +606,10 @@ CONFIDENCE RULES — follow exactly:
                     <a href={carUrl} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       🚗 Compare car rentals
+                    </a>
+                    <a href={buildGYGUrl(overnightCity)} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      🎟️ Things to do{overnightCity ? ` in ${overnightCity}` : ""}
                     </a>
                     <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate links</a></span>
                   </div>
