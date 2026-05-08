@@ -206,12 +206,17 @@ ${form.vehicle === "electric vehicle" ? "- Suggest Tesla Supercharger or ChargeP
 
 Use real town names and businesses. Start directly with Day 1.
 
+TRIP LENGTH — follow this exactly:
+${form.ret ? `- Return date is set: plan days accordingly` : `- No return date given: estimate the minimum driving days needed to reach the destination, then add 1 bonus day for exploration. Cap at 6 days total. Do not pad with extra days.`}
+- Prioritize a direct, logical route. Do not add detours or extra overnight stops unless they serve a specific listed interest.
+
 STYLE — use Option B format for every day:
 - Maximum 4 stops per day — quality over quantity, no cramming
-- For each stop write 2-3 sentences of rich specific context: why it is worth stopping, what to expect, insider tips, how long to budget
-- For quirky or roadside stops: describe what makes it special or weird and why it is worth the detour
-- For restaurants: mention the vibe, a specific dish or highlight, and practical tips like busy times or parking
-- For hotels: mention specific amenities relevant to this traveler such as pool, breakfast, or walkability
+- For each stop write exactly 1 sentence of specific detail. Maximum 30 words. Lead with the single most useful or compelling thing to know:
+  - Restaurants: name one specific dish or describe the vibe in one punchy sentence
+  - Hotels: name one amenity most relevant to this specific traveler
+  - Activities & parks: say what makes it worth stopping, not just what it is
+  - Quirky/roadside stops: say what makes it weird or special
 - Start each day with: "Day X: [Title]" on its own line
 - Use "8:00 AM - " format for times (always include AM/PM)
 - Do NOT use ### or ## or # markdown headers anywhere
