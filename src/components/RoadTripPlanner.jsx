@@ -449,7 +449,14 @@ CONFIDENCE RULES — follow exactly:
             {showNavDropdown && (
               <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: 180, zIndex: 100, overflow: "hidden" }}>
                 {[
-                  { label: "Google Maps", color: "#4285F4", href: `https://www.google.com/maps/dir/${encodeURIComponent(form.start)}/${form.stops ? encodeURIComponent(form.stops) + '/' : ''}${encodeURIComponent(form.end)}` },
+                  { label: "Google Maps", color: "#4285F4", href: (() => {
+                    const base = encodeURIComponent(form.start);
+                    const dest = encodeURIComponent(form.end);
+                    const waypoints = form.stops
+                      ? form.stops.split(",").map(s => encodeURIComponent(s.trim())).filter(Boolean).join("/") + "/"
+                      : "";
+                    return `https://www.google.com/maps/dir/${base}/${waypoints}${dest}`;
+                  })() },
                   { label: "Waze", color: "#33CCFF", href: `https://waze.com/ul?q=${encodeURIComponent(form.end)}&navigate=yes` },
                   { label: "Apple Maps", color: "#000", href: `https://maps.apple.com/?saddr=${encodeURIComponent(form.start)}&daddr=${encodeURIComponent(form.end)}` },
                 ].map(({ label, color, href }) => (
