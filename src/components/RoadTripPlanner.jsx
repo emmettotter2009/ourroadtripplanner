@@ -184,7 +184,16 @@ FORMATTING RULES — follow exactly:
 - Do NOT use bullet points with * or -
 - Label traveler tips as: "Traveler Tip: [text]"
 - Keep each item on its own line
-- Use plain text only, no markdown formatting symbols`;
+- Use plain text only, no markdown formatting symbols
+
+CONFIDENCE RULES — follow exactly:
+- For every specific restaurant, cafe, diner, or bar you recommend: assess your confidence that it currently exists and is operating
+- If HIGH confidence (well-known, established, frequently referenced): recommend normally
+- If LOW confidence (obscure, uncertain, possibly closed): add [VERIFY] before the name AND immediately suggest a confident alternative on the next line starting with "Alternative:"
+- For hotels and major chains: only flag with [VERIFY] if genuinely uncertain
+- Example of low confidence: "8:00 AM - Breakfast at [VERIFY] Joe's Diner (Mesa) - local spot
+Alternative: Look for a well-reviewed breakfast spot on Google Maps near downtown Mesa"
+- Example of high confidence: "8:00 AM - Breakfast at The Breakfast Club (Mesa) - iconic local spot"`;
   };
 
   const generate = async () => {
