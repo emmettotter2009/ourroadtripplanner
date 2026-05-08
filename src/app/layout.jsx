@@ -54,6 +54,13 @@ export default function RootLayout({ children }) {
           strategy="afterInteractive"
         />
 
+        {/* GetYourGuide Analytics */}
+        <Script
+          src="https://widget.getyourguide.com/dist/pa.umd.production.min.js"
+          data-gyg-partner-id="CKJU4TS"
+          strategy="afterInteractive"
+        />
+
         {/* Service Worker */}
         <script dangerouslySetInnerHTML={{
           __html: `
