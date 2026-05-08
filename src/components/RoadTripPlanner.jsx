@@ -50,31 +50,30 @@ const buildGYGUrl = (city) => {
 
 // Extract the overnight city from a day's title and lines
 const extractOvernightCity = (dayTitle, dayLines) => {
-  // 1. Scan lines for explicit overnight location patterns
-  for (const line of dayLines) {
-    const patterns = [
-      /tonight in ([A-Za-z\s,]+?)(?:\s*[-–]|$)/i,
-      /check.in.*?(?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
-      /staying (?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
-      /overnight (?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
-      /(?:koa|rv park|campground).*?in\s+([A-Za-z\s]+?)(?:\s*[-–(,]|$)/i,
-      /accommodation.*?(?:in|at)\s+([A-Za-z\s]+?)(?:\s*[-–(]|$)/i,
-      /hotel.*?(?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
-    ];
-    for (const p of patterns) {
-      const m = line.match(p);
-      if (m && m[1]) {
-        const city = m[1].trim().replace(/\s+(koa|rv|camp|park|second night.*)/i, "").trim();
-        if (city.length > 2) return city;
-      }
+  // 1. Only look in lines that explicitly mention accommodation/overnight
+  const accommodationLines = dayLines.filter(l =>
+    /check.?in|overnight|stay(?:ing)?|lodge|hotel|motel|inn|koa|rv park|campground|camp ground|accommodation/i.test(l)
+  );
+  for (const line of accommodationLines) {
+    // Match "at [Place Name], [City]" pattern — city follows a comma after property name
+    const commaCity = line.match(/,\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s*[-–(]|\s*$)/);
+    if (commaCity && commaCity[1] && !/^(the|this|our|your|a|an)$/i.test(commaCity[1])) {
+      return commaCity[1].trim();
+    }
+    // Match "in [City]" where City is capitalized and not a business-like phrase
+    const inCity = line.match(/\bin\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s+(?:rv|koa|camp|lodge|hotel|park|inn|motel))?/);
+    if (inCity && inCity[1] && !/^(the|this|our|your|a|an)$/i.test(inCity[1])) {
+      return inCity[1].trim();
     }
   }
-  // 2. Fall back to destination from day title e.g. "Day 3: Sedona to Flagstaff"
-  const toMatch = dayTitle.match(/to\s+([A-Za-z][A-Za-z\s]+?)(?:\s*[-–]|$)/i);
+  // 2. Extract destination city from day title e.g. "Day 3: Sedona to Flagstaff - subtitle"
+  const toMatch = dayTitle.match(/to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s*[-–]|$)/);
   if (toMatch && toMatch[1]) return toMatch[1].trim();
-  // 3. Fall back to first city-like word after the colon in the title
-  const colonMatch = dayTitle.match(/:\s*([A-Za-z]+)/);
-  if (colonMatch && colonMatch[1]) return colonMatch[1].trim();
+  // 3. Extract first proper noun after colon in title e.g. "Day 1: Sedona Exploration Day"
+  const colonMatch = dayTitle.match(/:\s*([A-Z][a-z]+)/);
+  if (colonMatch && colonMatch[1] && !/^(The|A|An|Day|Your|Our)$/.test(colonMatch[1])) {
+    return colonMatch[1].trim();
+  }
   return "";
 };
 
@@ -607,16 +606,12 @@ CONFIDENCE RULES — follow exactly:
                   });
                 })()}
 
-                {/* Booking.com affiliate links — Option 3 style */}
+                {/* Per-day affiliate links */}
                 {!isCamping && (
                   <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 10, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
                     <a href={hotelUrl} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       🏨 Search hotels{overnightCity ? ` in ${overnightCity}` : ""}
-                    </a>
-                    <a href={carUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      🚗 Compare car rentals
                     </a>
                     <a href={buildGYGUrl(overnightCity)} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
@@ -629,6 +624,21 @@ CONFIDENCE RULES — follow exactly:
             </div>
           );
         })}
+
+        {/* Single car rental link for the whole trip */}
+        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "0.85rem 1.25rem", marginBottom: "1rem", fontFamily: "sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>🚗 Need a rental car for this trip?</span>
+            <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 8 }}>Compare all major companies in one search</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <a href={buildBookingUrl(form.end, "cars")} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              Compare car rentals
+            </a>
+            <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate link</a></span>
+          </div>
+        </div>
 
         <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "1.5rem", marginTop: "0.5rem", marginBottom: "1.25rem" }}>
           <p style={{ fontSize: 13, color: gray, fontFamily: "sans-serif", marginBottom: "1rem" }}>✨ Bonus features:</p>
