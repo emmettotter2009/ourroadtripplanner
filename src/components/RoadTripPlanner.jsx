@@ -31,7 +31,6 @@ const inputStyle = {
 const DRAFT_KEY = "roadtrip_draft";
 const AWIN_ID = "2880651";
 const AWIN_MID = "6776";
-const GYG_PARTNER_ID = "CKJU4TS";
 
 const buildBookingUrl = (city, type = "hotels") => {
   const base = "https://www.awin1.com/cread.php";
@@ -43,49 +42,8 @@ const buildBookingUrl = (city, type = "hotels") => {
   return `${base}?${params}&ued=https%3A%2F%2Fwww.booking.com%2Fsearchresults.html%3Fss%3D${encoded}`;
 };
 
-const buildGYGUrl = (city) => {
-  const q = encodeURIComponent(city || "");
-  return `https://www.getyourguide.com/s/?q=${q}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher`;
-};
 
-// Extract the overnight city from a day's title, using form destinations as ground truth
-const extractOvernightCity = (dayTitle, dayLines, formStart, formEnd, formStops) => {
-  // Build a list of known cities from the user's trip inputs
-  const knownCities = [formEnd];
-  if (formStart) knownCities.push(formStart);
-  if (formStops) {
-    formStops.split(/[,;]/).forEach(s => { const t = s.trim(); if (t) knownCities.push(t); });
-  }
 
-  // 1. Check day title for "to [City]" pattern — match against known cities first
-  for (const city of knownCities) {
-    const cityBase = city.split(",")[0].trim(); // strip state e.g. "Phoenix, AZ" -> "Phoenix"
-    if (new RegExp(`to\\s+${cityBase}`, 'i').test(dayTitle)) return cityBase;
-  }
-
-  // 2. Check day title for any "to X" pattern (multi-word OK)
-  const toMatch = dayTitle.match(/\bto\s+((?:[A-Z][a-z]+\s*){1,3})(?:\s*[-–]|$)/);
-  if (toMatch && toMatch[1]) {
-    const candidate = toMatch[1].trim();
-    // Reject vague words like "the Rim", "a New"
-    if (!/^(the|a|an|our|your|this)\b/i.test(candidate)) return candidate;
-  }
-
-  // 3. Look in accommodation lines for "at [Property], [City]" comma pattern
-  const accommodationLines = dayLines.filter(l =>
-    /check.?in|overnight|lodge|hotel|motel|inn|koa|rv park|campground|accommodation/i.test(l)
-  );
-  for (const line of accommodationLines) {
-    // "Lodge Name, Sedona" or "RV Park, Flagstaff, AZ"
-    const commaCity = line.match(/,\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s*[,(]|\s*$)/);
-    if (commaCity && commaCity[1] && !/^(the|this|our|your|a|an|second|third)$/i.test(commaCity[1])) {
-      return commaCity[1].trim();
-    }
-  }
-
-  // 4. Fall back to form.end city (strip state)
-  return formEnd ? formEnd.split(",")[0].trim() : "";
-};
 
 export default function RoadTripPlanner() {
   const [step, setStep] = useState(0);
@@ -251,6 +209,12 @@ STYLE — use Option B format for every day:
 - Keep each item on its own line
 - Use plain text only, no markdown formatting symbols
 
+CITY TAGS — required for every day:
+- At the very end of each day's content, on its own line, add: [CITY:CityName]
+- CityName must be the actual city where travelers sleep that night (e.g. [CITY:Sedona] or [CITY:Grand Canyon])
+- Use only the city name, no state, no extra words
+- This tag is required on every single day, no exceptions
+
 CONFIDENCE RULES — follow exactly:
 - For every specific restaurant, cafe, diner, or bar you recommend: silently assess your confidence that it currently exists and is operating
 - If HIGH confidence: recommend it with full rich detail
@@ -399,14 +363,17 @@ CONFIDENCE RULES — follow exactly:
       if (/^#{1,3}\s*$/.test(t)) continue;
       if (/^(#{1,3}\s*)?(Day\s+\d+)/i.test(t)) {
         if (cur) days.push(cur);
-        cur = { title: t.replace(/^#+\s*/, "").replace(/\*\*/g, "").replace(/^-+\s*/, "").trim(), lines: [] };
+        cur = { title: t.replace(/^#+\s*/, "").replace(/\*\*/g, "").replace(/^-+\s*/, "").trim(), lines: [], city: "" };
       } else if (cur) {
+        // Extract and store city tag, strip from display
+        const cityMatch = t.match(/^\[CITY:([^\]]+)\]$/i);
+        if (cityMatch) { cur.city = cityMatch[1].trim(); continue; }
         const cleaned = t.replace(/^#{1,3}\s*/, "").replace(/^-\s+/, "").replace(/^\*\s+/, "").trim();
         if (cleaned) cur.lines.push(cleaned);
       }
     }
     if (cur) days.push(cur);
-    return days.length ? days : [{ title: "Your Itinerary", lines: text.split("\n").filter(Boolean) }];
+    return days.length ? days : [{ title: "Your Itinerary", lines: text.split("\n").filter(Boolean), city: "" }];
   };
 
   const formatLine = (line) => {
@@ -522,11 +489,7 @@ CONFIDENCE RULES — follow exactly:
           const colors = ["#2563eb","#059669","#7c3aed","#d97706","#dc2626","#0891b2","#65a30d"];
           const color = colors[i % colors.length];
           const isCamping = form.accommodation.some(a => /camp|rv|glamp/i.test(a));
-
-          // Extract overnight city for affiliate link
-          const overnightCity = extractOvernightCity(day.title, day.lines, form.start, form.end, form.stops);
-          const hotelUrl = buildBookingUrl(overnightCity);
-          const carUrl = buildBookingUrl(overnightCity, "cars");
+          const dayCity = day.city || form.end.split(",")[0];
 
           const timeRegex = /^(\d+:\d+\s*(AM|PM))/i;
           const tipRegex = /traveler tip|parent tip/i;
@@ -616,28 +579,27 @@ CONFIDENCE RULES — follow exactly:
                   });
                 })()}
 
-                {/* Per-day affiliate links — skip hotel on Day 1 (departure city) */}
-                {!isCamping && (
-                  <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 10, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-                    {i > 0 && (
-                      <a href={hotelUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        🏨 Search hotels{overnightCity ? ` in ${overnightCity}` : ""}
-                      </a>
-                    )}
-                    <a href={buildGYGUrl(overnightCity)} target="_blank" rel="noopener noreferrer"
+                {/* Per-day affiliate links using structured [CITY:X] tag */}
+                <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 10, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+                  {i > 0 && !isCamping && (
+                    <a href={buildBookingUrl(dayCity)} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      🎟️ Things to do{overnightCity ? ` in ${overnightCity}` : ""}
+                      🏨 Search hotels in {dayCity}
                     </a>
-                    <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate links</a></span>
-                  </div>
-                )}
+                  )}
+                  <a href={`https://www.getyourguide.com/s/?q=${encodeURIComponent(dayCity)}&partner_id=CKJU4TS&utm_medium=online_publisher`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    🎟️ Things to do in {dayCity}
+                  </a>
+                  <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate links</a></span>
+                </div>
+
               </div>
             </div>
           );
         })}
 
-        {/* Single car rental link for the whole trip */}
+        {/* Car rental — single link for whole trip */}
         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "0.85rem 1.25rem", marginBottom: "1rem", fontFamily: "sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div>
             <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>🚗 Need a rental car for this trip?</span>
@@ -645,7 +607,7 @@ CONFIDENCE RULES — follow exactly:
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <a href={buildBookingUrl(form.end, "cars")} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              style={{ fontSize: 13, color: "#D85A30", textDecoration: "none" }}>
               Compare car rentals
             </a>
             <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate link</a></span>
