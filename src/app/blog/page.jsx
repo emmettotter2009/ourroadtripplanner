@@ -1,4 +1,3 @@
-"use client";
 import Link from "next/link";
 
 export const metadata = {
@@ -59,10 +58,7 @@ export default function Blog() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {posts.map(post => (
             <Link key={post.slug} href={`/blog/${post.slug}`} style={{ textDecoration: "none" }}>
-              <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1.5rem", transition: "border-color 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "#D85A30"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}
-              >
+              <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1.5rem" }}>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
                   {post.tags.map(tag => (
                     <span key={tag} style={{ fontSize: 11, background: "#FEF3EC", color: "#D85A30", padding: "3px 10px", borderRadius: 20, fontWeight: 500 }}>{tag}</span>
