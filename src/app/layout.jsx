@@ -33,6 +33,8 @@ export default function RootLayout({ children }) {
       </head>
       <body style={{ margin: 0, padding: 0, fontFamily: "sans-serif", background: "#f9fafb" }}>
         {children}
+
+        {/* Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-3KW7DZZNPL"
           strategy="afterInteractive"
@@ -45,6 +47,14 @@ export default function RootLayout({ children }) {
             gtag('config', 'G-3KW7DZZNPL');
           `}
         </Script>
+
+        {/* Awin Publisher Master Tag — improves commission tracking in modern browsers */}
+        <Script
+          src="https://www.dwin1.com/19.js"
+          strategy="afterInteractive"
+        />
+
+        {/* Service Worker */}
         <script dangerouslySetInnerHTML={{
           __html: `
             if ('serviceWorker' in navigator) {
