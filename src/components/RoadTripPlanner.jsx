@@ -29,6 +29,37 @@ const inputStyle = {
 };
 
 const DRAFT_KEY = "roadtrip_draft";
+const AWIN_ID = "2880651";
+const AWIN_MID = "6776";
+
+const buildBookingUrl = (city, type = "hotels") => {
+  const base = "https://www.awin1.com/cread.php";
+  const params = `awinmid=${AWIN_MID}&awinaffid=${AWIN_ID}`;
+  if (type === "cars") {
+    return `${base}?${params}&campaign=CarRentals&ued=https%3A%2F%2Fwww.booking.com%2Fcars%2Findex.html`;
+  }
+  const encoded = encodeURIComponent(city || "");
+  return `${base}?${params}&ued=https%3A%2F%2Fwww.booking.com%2Fsearchresults.html%3Fss%3D${encoded}`;
+};
+
+// Extract the overnight city from a day's lines
+const extractOvernightCity = (dayLines, fallbackCity) => {
+  for (const line of dayLines) {
+    // Look for "Tonight in X" or "Stay in X" or hotel/check-in lines with a city
+    const patterns = [
+      /tonight in ([A-Za-z\s,]+?)(?:\s*[-–]|$)/i,
+      /check.in.*?(?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
+      /staying (?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
+      /overnight (?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
+      /hotel.*?(?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
+    ];
+    for (const p of patterns) {
+      const m = line.match(p);
+      if (m && m[1] && m[1].trim().length > 2) return m[1].trim();
+    }
+  }
+  return fallbackCity || "";
+};
 
 export default function RoadTripPlanner() {
   const [step, setStep] = useState(0);
@@ -68,7 +99,6 @@ export default function RoadTripPlanner() {
       if (saved) setForm(JSON.parse(saved));
       const history = localStorage.getItem("roadtrip_history");
       if (history) setTripHistory(JSON.parse(history));
-      // Learn default starting city from past trips
       const cityData = JSON.parse(localStorage.getItem("roadtrip_cities") || "{}");
       const topCity = Object.entries(cityData).sort((a,b) => b[1]-a[1])[0];
       if (topCity && topCity[1] >= 2) {
@@ -108,7 +138,6 @@ export default function RoadTripPlanner() {
       const updated = [trip, ...existing].slice(0, 20);
       localStorage.setItem("roadtrip_history", JSON.stringify(updated));
       setTripHistory(updated);
-      // Track starting city frequency
       if (form.start) {
         const cities = JSON.parse(localStorage.getItem("roadtrip_cities") || "{}");
         cities[form.start] = (cities[form.start] || 0) + 1;
@@ -195,7 +224,8 @@ CONFIDENCE RULES — follow exactly:
 - For every specific restaurant, cafe, diner, or bar you recommend: silently assess your confidence that it currently exists and is operating
 - If HIGH confidence: recommend it with full rich detail
 - If LOW confidence: silently replace it with your most confident alternative — never show flagging to the user
-- Always show only your most confident recommendation`;
+- Never use words like "verify", "confirm", "check ahead", or "⚠️" next to any specific business name
+- Always show only your most confident recommendation with no hedging symbols or language`;
   };
 
   const generate = async () => {
@@ -260,13 +290,7 @@ CONFIDENCE RULES — follow exactly:
     setChatMessages(prev => [...prev, { role: "user", content: userMsg }]);
     setChatLoading(true);
     try {
-      const context = `You are a helpful road trip assistant. The traveler has this itinerary:
-
-${itinerary}
-
-Trip details: From ${form.start} to ${form.end}${form.depart ? `, departing ${form.depart}` : ""}. ${form.withKids ? `Traveling with kids ages: ${form.kids.join(", ")}` : "Adults only trip"}. Vehicle: ${form.vehicle || "not specified"}. Budget: ${form.budget}.
-
-Answer their question helpfully and specifically based on their itinerary. Be friendly and concise.`;
+      const context = `You are a helpful road trip assistant. The traveler has this itinerary:\n\n${itinerary}\n\nTrip details: From ${form.start} to ${form.end}${form.depart ? `, departing ${form.depart}` : ""}. ${form.withKids ? `Traveling with kids ages: ${form.kids.join(", ")}` : "Adults only trip"}. Vehicle: ${form.vehicle || "not specified"}. Budget: ${form.budget}.\n\nAnswer their question helpfully and specifically based on their itinerary. Be friendly and concise.`;
       const messages = [
         { role: "user", content: context },
         ...chatMessages.map(m => ({ role: m.role, content: m.content })),
@@ -290,7 +314,6 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
     const printWindow = window.open('', '_blank');
     const days = parseDays(itinerary);
     const colors = ["#2563eb","#059669","#7c3aed","#d97706","#dc2626","#0891b2","#65a30d"];
-    
     const dayHTML = days.map((day, i) => `
       <div style="margin-bottom:20px; page-break-inside:avoid; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;">
         <div style="background:${colors[i % colors.length]}; padding:10px 16px; display:flex; justify-content:space-between;">
@@ -300,25 +323,18 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           ${day.lines.map(line => {
             const isTip = /traveler tip|parent tip/i.test(line);
             const formatted = line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            return isTip 
+            return isTip
               ? `<div style="background:#fffbeb;border-left:3px solid #f59e0b;padding:4px 10px;margin:6px 0;border-radius:0 4px 4px 0;">${formatted}</div>`
               : `<div>${formatted}</div>`;
           }).join('')}
         </div>
       </div>
     `).join('');
-
     printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
+      <!DOCTYPE html><html><head>
         <title>Road Trip: ${form.start} to ${form.end}</title>
-        <style>
-          body { font-family: Georgia, serif; max-width: 700px; margin: 0 auto; padding: 20px; color: #111; }
-          @media print { body { padding: 0; } .no-print { display: none; } }
-        </style>
-      </head>
-      <body>
+        <style>body { font-family: Georgia, serif; max-width: 700px; margin: 0 auto; padding: 20px; color: #111; } @media print { body { padding: 0; } .no-print { display: none; } }</style>
+      </head><body>
         <div style="background:#2C2C2A; padding:16px; border-radius:8px; margin-bottom:20px; text-align:center;">
           <h1 style="color:#F5F5F0; margin:0; font-size:22px;">🗺️ Your Road Trip Itinerary</h1>
           <p style="color:#D85A30; margin:6px 0 0; font-size:12px; letter-spacing:0.1em;">EVERY ROAD · YOUR WAY · ourroadtripplanner.com</p>
@@ -333,14 +349,10 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
         ${dayHTML}
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />
         <p style="font-size:11px; color:#9ca3af; font-family:sans-serif; text-align:center;">
-          AI-generated itinerary for planning purposes only. Always verify conditions before travel.<br/>
-          Generated by ourroadtripplanner.com
+          AI-generated itinerary for planning purposes only. Always verify conditions before travel.<br/>Generated by ourroadtripplanner.com
         </p>
-        <button class="no-print" onclick="window.print()" style="display:block;margin:20px auto;padding:10px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">
-          Print / Save as PDF
-        </button>
-      </body>
-      </html>
+        <button class="no-print" onclick="window.print()" style="display:block;margin:20px auto;padding:10px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">Print / Save as PDF</button>
+      </body></html>
     `);
     printWindow.document.close();
     printWindow.focus();
@@ -352,19 +364,13 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
     for (const line of lines) {
       const t = line.trim();
       if (!t) continue;
-      // Skip pure markdown headers that aren't day titles
       if (/^###\s*(Schedule|Accommodation|Activities|Traveler Tip|Trip Summary)/i.test(t)) continue;
       if (/^#{1,3}\s*$/.test(t)) continue;
       if (/^(#{1,3}\s*)?(Day\s+\d+)/i.test(t)) {
         if (cur) days.push(cur);
         cur = { title: t.replace(/^#+\s*/, "").replace(/\*\*/g, "").replace(/^-+\s*/, "").trim(), lines: [] };
       } else if (cur) {
-        // Clean the line before adding
-        const cleaned = t
-          .replace(/^#{1,3}\s*/, "")      // Remove markdown headers
-          .replace(/^-\s+/, "")           // Remove leading dashes
-          .replace(/^\*\s+/, "")          // Remove leading asterisks
-          .trim();
+        const cleaned = t.replace(/^#{1,3}\s*/, "").replace(/^-\s+/, "").replace(/^\*\s+/, "").trim();
         if (cleaned) cur.lines.push(cleaned);
       }
     }
@@ -411,11 +417,8 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
     </div>
   );
 
-  const isStreaming = !loading && itinerary !== null;
-
   if (itinerary !== null) {
     const days = parseDays(itinerary);
-    const stillWriting = loading === false && itinerary.length > 0 && !itinerary.match(/traveler tip|parent tip/i);
     return (
       <div style={{ maxWidth: 640, margin: "0 auto", fontFamily: "Georgia, serif", padding: "0 0 2rem" }}>
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8, fontFamily: "sans-serif" }}>
@@ -442,10 +445,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
             📄 PDF
           </button>
           <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setShowNavDropdown(v => !v)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#111", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}
-            >
+            <button onClick={() => setShowNavDropdown(v => !v)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", fontSize: 13, background: "#111", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>
               🗺️ Navigate {showNavDropdown ? "▲" : "▾"}
             </button>
             {showNavDropdown && (
@@ -455,8 +455,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                   { label: "Waze", color: "#33CCFF", href: `https://waze.com/ul?q=${encodeURIComponent(form.end)}&navigate=yes` },
                   { label: "Apple Maps", color: "#000", href: `https://maps.apple.com/?saddr=${encodeURIComponent(form.start)}&daddr=${encodeURIComponent(form.end)}` },
                 ].map(({ label, color, href }) => (
-                  <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                    onClick={() => setShowNavDropdown(false)}
+                  <a key={label} href={href} target="_blank" rel="noopener noreferrer" onClick={() => setShowNavDropdown(false)}
                     style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", fontSize: 13, color: "#374151", textDecoration: "none", borderBottom: "0.5px solid #f3f4f6", fontFamily: "sans-serif" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
                     onMouseLeave={e => e.currentTarget.style.background = "white"}
@@ -491,8 +490,13 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           const driveTime = driveMatch ? driveMatch[1] : null;
           const colors = ["#2563eb","#059669","#7c3aed","#d97706","#dc2626","#0891b2","#65a30d"];
           const color = colors[i % colors.length];
+          const isCamping = form.accommodation.some(a => /camp|rv|glamp/i.test(a));
 
-          // Parse timeline items from lines
+          // Extract overnight city for affiliate link
+          const overnightCity = extractOvernightCity(day.lines, i < days.length - 1 ? form.end : form.end);
+          const hotelUrl = buildBookingUrl(overnightCity);
+          const carUrl = buildBookingUrl(overnightCity, "cars");
+
           const timeRegex = /^(\d+:\d+\s*(AM|PM))/i;
           const tipRegex = /traveler tip|parent tip/i;
 
@@ -511,12 +515,10 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
 
           return (
             <div key={i} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, marginBottom: "1rem", overflow: "hidden" }}>
-              {/* Day header */}
               <div style={{ background: color, padding: "0.85rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "Georgia, serif" }}>{day.title}</div>
                 {driveTime && <span style={{ fontSize: 12, background: "rgba(255,255,255,0.25)", color: "white", padding: "3px 12px", borderRadius: 20, whiteSpace: "nowrap" }}>🚗 {driveTime}</span>}
               </div>
-              {/* Timeline body */}
               <div style={{ padding: "1rem 1.25rem", fontFamily: "sans-serif" }}>
                 {(() => {
                   const items = [];
@@ -563,7 +565,6 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
 
                     return (
                       <div key={idx} style={{ display: "flex", gap: 12, marginBottom: 4 }}>
-                        {/* Left: time + connector */}
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 56 }}>
                           {item.time && (
                             <div style={{ fontSize: 11, fontWeight: 600, color: color, whiteSpace: "nowrap", marginBottom: 4 }}>{item.time}</div>
@@ -573,7 +574,6 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                             <div style={{ width: 2, flex: 1, background: "#e5e7eb", minHeight: 16, marginTop: 4 }} />
                           )}
                         </div>
-                        {/* Right: content */}
                         <div style={{ paddingBottom: 16, flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: "#111", lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: formatLine(mainLine) }} />
                           {subLines.map((sub, si) => (
@@ -584,6 +584,21 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                     );
                   });
                 })()}
+
+                {/* Booking.com affiliate links — Option 3 style */}
+                {!isCamping && (
+                  <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 10, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+                    <a href={hotelUrl} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      🏨 Search hotels{overnightCity ? ` in ${overnightCity}` : ""}
+                    </a>
+                    <a href={carUrl} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      🚗 Compare car rentals
+                    </a>
+                    <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate links</a></span>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -603,9 +618,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
             <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", marginLeft: "auto" }}>Shop on Amazon</span>
           </div>
           <div style={{ padding: "1rem 1.25rem", background: "white" }}>
-            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
-              Packing for your trip? Here are some essentials other road trippers love:
-            </p>
+            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>Packing for your trip? Here are some essentials other road trippers love:</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {[
                 ...(!form.withKids ? [] : [
@@ -633,17 +646,8 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 { emoji: "🧴", label: "Travel Toiletry Kit", q: "travel+toiletry+bag+toiletries" },
                 { emoji: "💊", label: "Motion Sickness Relief", q: "motion+sickness+relief+travel" },
               ].map(({ emoji, label, q }) => (
-                <a
-                  key={q}
-                  href={`https://www.amazon.com/s?k=${q}&tag=ourroadtrippl-20`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "8px 10px", borderRadius: 8,
-                    border: "1px solid #e5e7eb", textDecoration: "none",
-                    background: "#fafafa", transition: "all 0.15s",
-                  }}
+                <a key={q} href={`https://www.amazon.com/s?k=${q}&tag=ourroadtrippl-20`} target="_blank" rel="noopener noreferrer"
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #e5e7eb", textDecoration: "none", background: "#fafafa", transition: "all 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = "#FF9900"}
                   onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}
                 >
@@ -652,18 +656,13 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 </a>
               ))}
             </div>
-            <p style={{ fontSize: 11, color: "#d1d5db", marginTop: 10, textAlign: "center" }}>
-              As an Amazon Associate we earn from qualifying purchases.
-            </p>
+            <p style={{ fontSize: 11, color: "#d1d5db", marginTop: 10, textAlign: "center" }}>As an Amazon Associate we earn from qualifying purchases.</p>
           </div>
         </div>
 
         {/* Chat Dialog */}
         <div style={{ marginTop: "1.5rem", border: "1px solid #2563eb", borderRadius: 12, overflow: "hidden", fontFamily: "sans-serif" }}>
-          <div
-            onClick={() => setShowChat(v => !v)}
-            style={{ background: "#2563eb", padding: "0.85rem 1.25rem", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-          >
+          <div onClick={() => setShowChat(v => !v)} style={{ background: "#2563eb", padding: "0.85rem 1.25rem", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>💬 Ask about your trip</span>
             <span style={{ color: "white", fontSize: 18 }}>{showChat ? "▼" : "▲"}</span>
           </div>
@@ -687,12 +686,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 {chatMessages.map((msg, i) => (
                   <div key={i} style={{ marginBottom: 12, display: "flex", flexDirection: msg.role === "user" ? "row-reverse" : "row", gap: 8 }}>
                     <div style={{ fontSize: 20 }}>{msg.role === "user" ? "👤" : "🗺️"}</div>
-                    <div style={{
-                      maxWidth: "80%", padding: "8px 12px", borderRadius: msg.role === "user" ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
-                      background: msg.role === "user" ? "#2563eb" : "#f3f4f6",
-                      color: msg.role === "user" ? "white" : "#374151",
-                      fontSize: 13, lineHeight: 1.6,
-                    }}>{msg.content}</div>
+                    <div style={{ maxWidth: "80%", padding: "8px 12px", borderRadius: msg.role === "user" ? "12px 12px 4px 12px" : "12px 12px 12px 4px", background: msg.role === "user" ? "#2563eb" : "#f3f4f6", color: msg.role === "user" ? "white" : "#374151", fontSize: 13, lineHeight: 1.6 }}>{msg.content}</div>
                   </div>
                 ))}
                 {chatLoading && (
@@ -703,13 +697,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 )}
               </div>
               <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid #e5e7eb", display: "flex", gap: 8 }}>
-                <input
-                  style={{ ...inputStyle, flex: 1, fontSize: 13 }}
-                  placeholder="Ask anything about your trip..."
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && sendChat()}
-                />
+                <input style={{ ...inputStyle, flex: 1, fontSize: 13 }} placeholder="Ask anything about your trip..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
                 <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} style={{ ...btnP, padding: "8px 16px", fontSize: 13, opacity: chatLoading || !chatInput.trim() ? 0.5 : 1 }}>Send</button>
               </div>
             </div>
@@ -742,7 +730,6 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
     </div>
   );
 
-  // Viewing a saved trip
   if (viewingTrip) {
     const days = parseDays(viewingTrip.itinerary);
     return (
@@ -764,7 +751,6 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
     );
   }
 
-  // History view
   if (showHistory) {
     return (
       <div style={{ maxWidth: 640, margin: "0 auto", fontFamily: "sans-serif", padding: "0 0 2rem" }}>
@@ -816,18 +802,11 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
         </div>
       </div>
 
-      {/* Numbered step navigation */}
       <div style={{ display: "flex", alignItems: "center", marginBottom: "1.5rem" }}>
         {STEPS.map((s, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : "none" }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, fontWeight: 700, fontFamily: "sans-serif",
-                background: i < step ? green : i === step ? blue : "#e5e7eb",
-                color: i <= step ? "white" : "#9ca3af",
-                transition: "all 0.3s", flexShrink: 0,
-              }}>{i < step ? "✓" : i + 1}</div>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, fontFamily: "sans-serif", background: i < step ? green : i === step ? blue : "#e5e7eb", color: i <= step ? "white" : "#9ca3af", transition: "all 0.3s", flexShrink: 0 }}>{i < step ? "✓" : i + 1}</div>
               <div style={{ fontSize: 10, color: i === step ? blue : i < step ? green : "#9ca3af", fontFamily: "sans-serif", whiteSpace: "nowrap", fontWeight: i === step ? 600 : 400 }}>{s}</div>
             </div>
             {i < STEPS.length - 1 && (
@@ -862,12 +841,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 {v:"RV or camper van", icon:"🚐", l:"RV / Van"},
                 {v:"truck", icon:"🛻", l:"Truck"},
               ].map(({v, icon, l}) => (
-                <button key={v} onClick={() => upd("vehicle", form.vehicle === v ? "" : v)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 6, padding: "12px 8px", border: form.vehicle === v ? "2px solid #2563eb" : "1px solid #d1d5db",
-                  borderRadius: 10, background: form.vehicle === v ? "#dbeafe" : "white",
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                }}>
+                <button key={v} onClick={() => upd("vehicle", form.vehicle === v ? "" : v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.vehicle === v ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.vehicle === v ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
                   <span style={{ fontSize: 24 }}>{icon}</span>
                   <span style={{ fontSize: 12, color: form.vehicle === v ? "#1e40af" : "#374151", fontWeight: form.vehicle === v ? 600 : 400 }}>{l}</span>
                 </button>
@@ -885,12 +859,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 {label: "Traveling with kids", icon: "👨‍👩‍👧‍👦", val: true},
                 {label: "Adults only", icon: "🧑‍🤝‍🧑", val: false},
               ].map(({label, icon, val}) => (
-                <button key={label} onClick={() => upd("withKids", val)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 6, padding: "16px 8px", border: form.withKids === val ? "2px solid #2563eb" : "1px solid #d1d5db",
-                  borderRadius: 10, background: form.withKids === val ? "#dbeafe" : "white",
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                }}>
+                <button key={label} onClick={() => upd("withKids", val)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "16px 8px", border: form.withKids === val ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.withKids === val ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
                   <span style={{ fontSize: 28 }}>{icon}</span>
                   <span style={{ fontSize: 13, color: form.withKids === val ? "#1e40af" : "#374151", fontWeight: form.withKids === val ? 600 : 400 }}>{label}</span>
                 </button>
@@ -929,29 +898,10 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
           <Field label="Travel considerations">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
               {(form.withKids
-                ? [
-                    {v:"motion sickness", icon:"🤢"},
-                    {v:"frequent bathroom breaks", icon:"🚻"},
-                    {v:"restless kids", icon:"😤"},
-                    {v:"baby or toddler", icon:"👶"},
-                    {v:"traveling with a pet", icon:"🐾"},
-                    {v:"allergies or medical needs", icon:"💊"},
-                  ]
-                : [
-                    {v:"traveling with a pet", icon:"🐾"},
-                    {v:"mobility considerations", icon:"♿"},
-                    {v:"prefer avoiding highways", icon:"🛣️"},
-                    {v:"large group", icon:"👥"},
-                    {v:"first time on this route", icon:"🗺️"},
-                    {v:"allergies or medical needs", icon:"💊"},
-                  ]
+                ? [{v:"motion sickness", icon:"🤢"},{v:"frequent bathroom breaks", icon:"🚻"},{v:"restless kids", icon:"😤"},{v:"baby or toddler", icon:"👶"},{v:"traveling with a pet", icon:"🐾"},{v:"allergies or medical needs", icon:"💊"}]
+                : [{v:"traveling with a pet", icon:"🐾"},{v:"mobility considerations", icon:"♿"},{v:"prefer avoiding highways", icon:"🛣️"},{v:"large group", icon:"👥"},{v:"first time on this route", icon:"🗺️"},{v:"allergies or medical needs", icon:"💊"}]
               ).map(({v, icon}) => (
-                <button key={v} onClick={() => toggleArr("considerations", v)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 6, padding: "12px 8px", border: form.considerations.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
-                  borderRadius: 10, background: form.considerations.includes(v) ? "#dbeafe" : "white",
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
-                }}>
+                <button key={v} onClick={() => toggleArr("considerations", v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.considerations.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.considerations.includes(v) ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center" }}>
                   <span style={{ fontSize: 22 }}>{icon}</span>
                   <span style={{ fontSize: 11, color: form.considerations.includes(v) ? "#1e40af" : "#374151", fontWeight: form.considerations.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{v}</span>
                 </button>
@@ -980,12 +930,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 {v:"Must have pool", icon:"🏊", l:"Must Have Pool"},
                 {v:"Pet-friendly", icon:"🐾", l:"Pet Friendly"},
               ].map(({v, icon, l}) => (
-                <button key={v} onClick={() => toggleArr("accommodation", v)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 6, padding: "12px 8px", border: form.accommodation.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
-                  borderRadius: 10, background: form.accommodation.includes(v) ? "#dbeafe" : "white",
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
-                }}>
+                <button key={v} onClick={() => toggleArr("accommodation", v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.accommodation.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.accommodation.includes(v) ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center" }}>
                   <span style={{ fontSize: 22 }}>{icon}</span>
                   <span style={{ fontSize: 11, color: form.accommodation.includes(v) ? "#1e40af" : "#374151", fontWeight: form.accommodation.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{l}</span>
                 </button>
@@ -1006,12 +951,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 {v:"Cracker Barrel", icon:"🪑", l:"Cracker Barrel"},
                 {v:"Panera", icon:"🥐", l:"Panera"},
               ].map(({v, icon, l}) => (
-                <button key={v} onClick={() => toggleArr("food", v)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 6, padding: "12px 8px", border: form.food.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
-                  borderRadius: 10, background: form.food.includes(v) ? "#dbeafe" : "white",
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
-                }}>
+                <button key={v} onClick={() => toggleArr("food", v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.food.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.food.includes(v) ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center" }}>
                   <span style={{ fontSize: 22 }}>{icon}</span>
                   <span style={{ fontSize: 11, color: form.food.includes(v) ? "#1e40af" : "#374151", fontWeight: form.food.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{l}</span>
                 </button>
@@ -1045,12 +985,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                   : [{v:"Wineries & breweries", icon:"🍷"},{v:"Live music & nightlife", icon:"🎵"},{v:"Fine dining", icon:"🍾"},{v:"Spa & wellness", icon:"🧖"}]
                 )
               ].map(({v, icon}) => (
-                <button key={v} onClick={() => toggleArr("interests", v)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 6, padding: "12px 8px", border: form.interests.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db",
-                  borderRadius: 10, background: form.interests.includes(v) ? "#dbeafe" : "white",
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center",
-                }}>
+                <button key={v} onClick={() => toggleArr("interests", v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.interests.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.interests.includes(v) ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center" }}>
                   <span style={{ fontSize: 22 }}>{icon}</span>
                   <span style={{ fontSize: 11, color: form.interests.includes(v) ? "#1e40af" : "#374151", fontWeight: form.interests.includes(v) ? 600 : 400, lineHeight: 1.3 }}>{v}</span>
                 </button>
@@ -1064,12 +999,7 @@ Answer their question helpfully and specifically based on their itinerary. Be fr
                 {v:"moderate", icon:"💳", l:"Moderate"},
                 {v:"splurge-worthy", icon:"✨", l:"Splurge Worthy"},
               ].map(({v, icon, l}) => (
-                <button key={v} onClick={() => upd("budget", v)} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 6, padding: "14px 8px", border: form.budget === v ? "2px solid #2563eb" : "1px solid #d1d5db",
-                  borderRadius: 10, background: form.budget === v ? "#dbeafe" : "white",
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                }}>
+                <button key={v} onClick={() => upd("budget", v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "14px 8px", border: form.budget === v ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.budget === v ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
                   <span style={{ fontSize: 24 }}>{icon}</span>
                   <span style={{ fontSize: 12, color: form.budget === v ? "#1e40af" : "#374151", fontWeight: form.budget === v ? 600 : 400 }}>{l}</span>
                 </button>
