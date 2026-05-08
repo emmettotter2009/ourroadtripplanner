@@ -48,23 +48,34 @@ const buildGYGUrl = (city) => {
   return `https://www.getyourguide.com/s/?q=${q}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher`;
 };
 
-// Extract the overnight city from a day's lines
-const extractOvernightCity = (dayLines, fallbackCity) => {
+// Extract the overnight city from a day's title and lines
+const extractOvernightCity = (dayTitle, dayLines) => {
+  // 1. Scan lines for explicit overnight location patterns
   for (const line of dayLines) {
-    // Look for "Tonight in X" or "Stay in X" or hotel/check-in lines with a city
     const patterns = [
       /tonight in ([A-Za-z\s,]+?)(?:\s*[-–]|$)/i,
       /check.in.*?(?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
       /staying (?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
       /overnight (?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
+      /(?:koa|rv park|campground).*?in\s+([A-Za-z\s]+?)(?:\s*[-–(,]|$)/i,
+      /accommodation.*?(?:in|at)\s+([A-Za-z\s]+?)(?:\s*[-–(]|$)/i,
       /hotel.*?(?:in|at)\s+([A-Za-z\s]+(?:,\s*[A-Z]{2})?)/i,
     ];
     for (const p of patterns) {
       const m = line.match(p);
-      if (m && m[1] && m[1].trim().length > 2) return m[1].trim();
+      if (m && m[1]) {
+        const city = m[1].trim().replace(/\s+(koa|rv|camp|park|second night.*)/i, "").trim();
+        if (city.length > 2) return city;
+      }
     }
   }
-  return fallbackCity || "";
+  // 2. Fall back to destination from day title e.g. "Day 3: Sedona to Flagstaff"
+  const toMatch = dayTitle.match(/to\s+([A-Za-z][A-Za-z\s]+?)(?:\s*[-–]|$)/i);
+  if (toMatch && toMatch[1]) return toMatch[1].trim();
+  // 3. Fall back to first city-like word after the colon in the title
+  const colonMatch = dayTitle.match(/:\s*([A-Za-z]+)/);
+  if (colonMatch && colonMatch[1]) return colonMatch[1].trim();
+  return "";
 };
 
 export default function RoadTripPlanner() {
@@ -504,7 +515,7 @@ CONFIDENCE RULES — follow exactly:
           const isCamping = form.accommodation.some(a => /camp|rv|glamp/i.test(a));
 
           // Extract overnight city for affiliate link
-          const overnightCity = extractOvernightCity(day.lines, i < days.length - 1 ? form.end : form.end);
+          const overnightCity = extractOvernightCity(day.title, day.lines);
           const hotelUrl = buildBookingUrl(overnightCity);
           const carUrl = buildBookingUrl(overnightCity, "cars");
 
