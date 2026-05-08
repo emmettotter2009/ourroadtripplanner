@@ -177,7 +177,12 @@ ${form.vehicle === "electric vehicle" ? "- Suggest Tesla Supercharger or ChargeP
 
 Use real town names and businesses. Start directly with Day 1.
 
-FORMATTING RULES — follow exactly:
+STYLE — use Option B format for every day:
+- Maximum 4 stops per day — quality over quantity, no cramming
+- For each stop write 2-3 sentences of rich specific context: why it is worth stopping, what to expect, insider tips, how long to budget
+- For quirky or roadside stops: describe what makes it special or weird and why it is worth the detour
+- For restaurants: mention the vibe, a specific dish or highlight, and practical tips like busy times or parking
+- For hotels: mention specific amenities relevant to this traveler such as pool, breakfast, or walkability
 - Start each day with: "Day X: [Title]" on its own line
 - Use "8:00 AM - " format for times (always include AM/PM)
 - Do NOT use ### or ## or # markdown headers anywhere
@@ -187,13 +192,10 @@ FORMATTING RULES — follow exactly:
 - Use plain text only, no markdown formatting symbols
 
 CONFIDENCE RULES — follow exactly:
-- For every specific restaurant, cafe, diner, or bar you recommend: assess your confidence that it currently exists and is operating
-- If HIGH confidence (well-known, established, frequently referenced): recommend normally
-- If LOW confidence (obscure, uncertain, possibly closed): add [VERIFY] before the name AND immediately suggest a confident alternative on the next line starting with "Alternative:"
-- For hotels and major chains: only flag with [VERIFY] if genuinely uncertain
-- Example of low confidence: "8:00 AM - Breakfast at [VERIFY] Joe's Diner (Mesa) - local spot
-Alternative: Look for a well-reviewed breakfast spot on Google Maps near downtown Mesa"
-- Example of high confidence: "8:00 AM - Breakfast at The Breakfast Club (Mesa) - iconic local spot"`;
+- For every specific restaurant, cafe, diner, or bar you recommend: silently assess your confidence that it currently exists and is operating
+- If HIGH confidence: recommend it with full rich detail
+- If LOW confidence: silently replace it with your most confident alternative — never show flagging to the user
+- Always show only your most confident recommendation`;
   };
 
   const generate = async () => {
