@@ -49,7 +49,7 @@ export default function Terms() {
       <p>We reserve the right to update these Terms of Use at any time. Continued use of the service after changes constitutes acceptance of the new terms.</p>
 
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111", marginTop: "1.5rem" }}>9. Contact</h2>
-      <p>For questions about these terms, please contact us at <a href="mailto:hello@ourroadtripplanner.com" style={{ color: "#2563eb" }}>hello@ourroadtripplanner.com</a>.</p>
+      <p>For questions about these terms, please contact us at <a href="mailto:ourroadtripplanner@gmail.com" style={{ color: "#2563eb" }}>ourroadtripplanner@gmail.com</a>.</p>
 
       <div style={{ marginTop: "2rem", paddingTop: "1rem", borderTop: "1px solid #e5e7eb", fontFamily: "sans-serif", fontSize: 12, color: "#9ca3af" }}>
         <a href="/" style={{ color: "#2563eb", textDecoration: "none" }}>← Back to Road Trip Planner</a>
