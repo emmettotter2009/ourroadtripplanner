@@ -19,7 +19,7 @@ export default function AffiliateDisclosure() {
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111", marginTop: "1.5rem" }}>FTC Compliance</h2>
       <p>In accordance with the Federal Trade Commission's guidelines on endorsements and testimonials, we disclose that we may receive compensation for links on this site. This disclosure applies to all pages and itineraries generated on ourroadtripplanner.com.</p>
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111", marginTop: "1.5rem" }}>Questions?</h2>
-      <p>If you have questions about our affiliate relationships, contact us at <a href="mailto:hello@ourroadtripplanner.com" style={{ color: "#2563eb" }}>hello@ourroadtripplanner.com</a>.</p>
+      <p>If you have questions about our affiliate relationships, contact us at <a href="mailto:ourroadtripplanner@gmail.com" style={{ color: "#2563eb" }}>ourroadtripplanner@gmail.com</a>.</p>
       <div style={{ marginTop: "2rem", paddingTop: "1rem", borderTop: "1px solid #e5e7eb", fontFamily: "sans-serif", fontSize: 12, color: "#9ca3af" }}>
         <a href="/" style={{ color: "#2563eb", textDecoration: "none" }}>← Back to Road Trip Planner</a>
       </div>
