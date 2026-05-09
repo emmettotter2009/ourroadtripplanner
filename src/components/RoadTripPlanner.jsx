@@ -186,7 +186,7 @@ For EACH day include:
 - One traveler tip
 ${form.vehicle === "motorcycle" ? "- Weather and road surface warnings for motorcycles" : ""}
 ${form.vehicle === "2WD" ? "- Flag roads requiring AWD or problematic for 2WD" : ""}
-${form.vehicle === "electric vehicle" ? "- Suggest Tesla Supercharger or ChargePoint/EVgo charging stops along the route, note estimated range between charges, and flag any legs with limited charging infrastructure" : ""}
+${form.vehicle === "electric vehicle" ? `- Suggest appropriate EV charging stops: ${(() => { const t = (form.start + ' ' + form.end).toLowerCase(); const intl = ['uk','england','scotland','wales','ireland','france','germany','spain','italy','netherlands','belgium','portugal','switzerland','austria','norway','sweden','denmark','finland','australia','canada','mexico','japan','new zealand'].some(c => t.includes(c)); return intl ? 'use Ionity, Fastned, Pod Point, or local networks for the region; mention Zap-Map (UK) or ABRP where relevant' : 'use Tesla Supercharger, ChargePoint, or EVgo; note range between charges and flag legs with limited infrastructure'; })()} ` : ""}
 
 Use real town names and businesses. Start directly with Day 1.
 
