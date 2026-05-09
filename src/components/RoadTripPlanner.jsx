@@ -45,6 +45,97 @@ const buildBookingUrl = (city, type = "hotels") => {
 
 
 
+const FeedbackWidget = ({ trip }) => {
+  const [state, setState] = useState("idle");
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const sendFeedback = async (type) => {
+    if (type === "positive") {
+      setState("positive");
+      try {
+        await fetch("/api/send-email", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: "ourroadtripplanner@gmail.com",
+            subject: `Positive feedback: ${trip.start} → ${trip.end}`,
+            itinerary: `Trip: ${trip.start} → ${trip.end}${trip.depart ? `, departing ${trip.depart}` : ""}\n\nFeedback: Loved it!`,
+            trip,
+          }),
+        });
+      } catch(e) {}
+      return;
+    }
+    if (type === "submit") {
+      if (!text.trim()) return;
+      setSending(true);
+      try {
+        await fetch("/api/send-email", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: "ourroadtripplanner@gmail.com",
+            subject: `Feedback: ${trip.start} → ${trip.end}`,
+            itinerary: `Trip: ${trip.start} → ${trip.end}${trip.depart ? `, departing ${trip.depart}` : ""}\n\nFeedback: ${text}`,
+            trip,
+          }),
+        });
+      } catch(e) {}
+      setState("submitted");
+      setSending(false);
+    }
+  };
+
+  return (
+    <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1rem", fontFamily: "sans-serif" }}>
+      {state === "idle" && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>How was your itinerary?</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => { setState("positive"); sendFeedback("positive"); }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", border: "1px solid #d1d5db", borderRadius: 8, background: "white", fontSize: 13, color: "#374151", cursor: "pointer" }}>
+              👍 Loved it
+            </button>
+            <button onClick={() => setState("negative")}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", border: "1px solid #d1d5db", borderRadius: 8, background: "white", fontSize: 13, color: "#374151", cursor: "pointer" }}>
+              👎 Needs work
+            </button>
+          </div>
+        </div>
+      )}
+      {state === "positive" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>✅</span>
+          <span style={{ fontSize: 14, color: "#059669", fontWeight: 500 }}>Thanks! So glad it was helpful.</span>
+        </div>
+      )}
+      {state === "negative" && (
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 10px" }}>What could be better?</p>
+          <textarea
+            placeholder="Too many days, wrong restaurants, driving times felt off..."
+            value={text}
+            onChange={e => setText(e.target.value)}
+            rows={3}
+            style={{ width: "100%", fontSize: 13, border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 10px", resize: "none", fontFamily: "sans-serif", color: "#111", boxSizing: "border-box" }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <button onClick={() => sendFeedback("submit")} disabled={sending || !text.trim()}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", border: "1px solid #d1d5db", borderRadius: 8, background: "white", fontSize: 13, color: "#374151", cursor: sending || !text.trim() ? "not-allowed" : "pointer", opacity: sending || !text.trim() ? 0.5 : 1 }}>
+              {sending ? "Sending..." : "Send feedback"}
+            </button>
+          </div>
+        </div>
+      )}
+      {state === "submitted" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>✅</span>
+          <span style={{ fontSize: 14, color: "#059669", fontWeight: 500 }}>Got it — thank you! We'll use this to make the planner better.</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function RoadTripPlanner() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -720,6 +811,9 @@ CONFIDENCE RULES — follow exactly:
             </div>
           )}
         </div>
+
+        {/* Feedback Widget */}
+        <FeedbackWidget trip={{ start: form.start, end: form.end, depart: form.depart }} />
 
         {/* Footer */}
         <div style={{ marginTop: "2rem", padding: "1.25rem", background: "#f9fafb", borderRadius: 10, fontFamily: "sans-serif", fontSize: 12, color: "#9ca3af", lineHeight: 1.7 }}>
