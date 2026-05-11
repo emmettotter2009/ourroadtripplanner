@@ -1001,10 +1001,10 @@ CONFIDENCE RULES — follow exactly:
             </div>
           </Field>
           <Field label={`Normal driving day: ${form.driveNormal} hrs`}>
-            <input type="range" min="2" max="7" step="0.5" value={form.driveNormal} onChange={e => upd("driveNormal", parseFloat(e.target.value))} style={{ width: "100%" }} />
+            <input type="range" min="2" max="14" step="0.5" value={form.driveNormal} onChange={e => upd("driveNormal", parseFloat(e.target.value))} style={{ width: "100%" }} />
           </Field>
           <Field label={`Maximum push day: ${form.driveMax} hrs`}>
-            <input type="range" min="4" max="12" step="0.5" value={form.driveMax} onChange={e => upd("driveMax", parseFloat(e.target.value))} style={{ width: "100%" }} />
+            <input type="range" min="4" max="18" step="0.5" value={form.driveMax} onChange={e => upd("driveMax", parseFloat(e.target.value))} style={{ width: "100%" }} />
           </Field>
           <Field label="Travel considerations">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
