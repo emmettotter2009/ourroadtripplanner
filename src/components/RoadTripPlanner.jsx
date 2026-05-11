@@ -937,8 +937,8 @@ CONFIDENCE RULES — follow exactly:
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
             <Field label="Departure date"><input style={inputStyle} type="date" value={form.depart} onChange={e => upd("depart", e.target.value)} /></Field>
-            <Field label="Must arrive by (optional)"><input style={inputStyle} type="date" value={form.arrive} onChange={e => upd("arrive", e.target.value)} /></Field>
-            <Field label="Return date (optional)"><input style={inputStyle} type="date" value={form.ret} onChange={e => upd("ret", e.target.value)} /></Field>
+            <Field label="Must arrive by (optional)"><input style={inputStyle} type="date" value={form.arrive} min={form.depart || undefined} onChange={e => upd("arrive", e.target.value)} onClick={e => { if (!form.arrive && form.depart) upd("arrive", form.depart); }} /></Field>
+            <Field label="Return date (optional)"><input style={inputStyle} type="date" value={form.ret} min={form.depart || undefined} onChange={e => upd("ret", e.target.value)} onClick={e => { if (!form.ret && form.depart) upd("ret", form.depart); }} /></Field>
           </div>
           <Field label="Must-see stops or detours?"><input style={inputStyle} value={form.stops} onChange={e => upd("stops", e.target.value)} placeholder="e.g. Sedona, Meteor Crater" /></Field>
           <p style={{ fontSize: 11, color: "#9ca3af", marginTop: -8, fontFamily: "sans-serif" }}><span style={{ color: "#dc2626" }}>*</span> Required fields</p>
