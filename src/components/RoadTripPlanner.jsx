@@ -517,7 +517,8 @@ CONFIDENCE RULES — follow exactly:
           </button>
         </div>
         <div style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)", borderRadius: 16, padding: "1.5rem", marginBottom: "1.5rem", color: "white" }}>
-          <div style={{ fontSize: 12, fontFamily: "sans-serif", opacity: 0.8, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Your Road Trip Itinerary</div>
+          <div style={{ fontSize: 12, fontFamily: "sans-serif", opacity: 0.8, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>Your Road Trip Itinerary</div>
+          <div style={{ fontSize: 10, fontFamily: "sans-serif", color: "#D85A30", letterSpacing: "0.12em", marginBottom: 8 }}>EVERY ROAD · YOUR WAY™</div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "white", margin: "0 0 4px 0", fontFamily: "Georgia, serif" }}>🗺️ {form.start} → {form.end}</h1>
           <div style={{ display: "flex", gap: 16, marginTop: 10, flexWrap: "wrap" }}>
             {form.depart && <span style={{ fontSize: 13, fontFamily: "sans-serif", background: "rgba(255,255,255,0.15)", padding: "4px 12px", borderRadius: 20 }}>📅 Departing {form.depart}</span>}
@@ -903,6 +904,7 @@ CONFIDENCE RULES — follow exactly:
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: 0 }}>Road Trip Planner</h1>
+            <div style={{ fontSize: 10, color: "#D85A30", letterSpacing: "0.12em", marginTop: 2, marginBottom: 2 }}>EVERY ROAD · YOUR WAY™</div>
             <p style={{ fontSize: 14, color: gray, marginTop: 4 }}>Tell us about your trip and we'll build the perfect itinerary</p>
           </div>
           {tripHistory.length > 0 && (
