@@ -423,7 +423,7 @@ CONFIDENCE RULES — follow exactly:
       </head><body>
         <div style="background:#2C2C2A; padding:16px; border-radius:8px; margin-bottom:20px; text-align:center;">
           <h1 style="color:#F5F5F0; margin:0; font-size:22px;">🗺️ Your Road Trip Itinerary</h1>
-          <p style="color:#D85A30; margin:6px 0 0; font-size:12px; letter-spacing:0.1em;">EVERY ROAD · YOUR WAY · ourroadtripplanner.com</p>
+          <p style="color:#D85A30; margin:6px 0 0; font-size:12px; letter-spacing:0.1em;">EVERY ROAD · YOUR WAY™ · ourroadtripplanner.com</p>
         </div>
         <h2 style="font-size:18px;">${form.start} → ${form.end}</h2>
         <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; font-family:sans-serif; font-size:13px; color:#6b7280;">
