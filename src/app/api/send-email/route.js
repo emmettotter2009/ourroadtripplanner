@@ -73,7 +73,7 @@ export async function POST(request) {
       <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff;">
         <div style="background: #2C2C2A; padding: 20px; border-radius: 8px; margin-bottom: 24px; text-align: center;">
           <h1 style="font-size: 22px; color: #F5F5F0; margin: 0;">🗺️ Your Road Trip Itinerary</h1>
-          <p style="color: #D85A30; font-size: 13px; margin: 6px 0 0; letter-spacing: 0.1em;">EVERY ROAD · YOUR WAY</p>
+          <p style="color: #D85A30; font-size: 13px; margin: 6px 0 0; letter-spacing: 0.1em;">EVERY ROAD · YOUR WAY™</p>
         </div>
         <h2 style="font-size: 18px; color: #111;">${trip.start} → ${trip.end}</h2>
         ${trip.depart ? `<p style="color: #6b7280; font-size: 14px;">Departing ${trip.depart}</p>` : ""}
