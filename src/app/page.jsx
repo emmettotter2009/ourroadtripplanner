@@ -34,10 +34,10 @@ export default function Home() {
         {/* Content */}
         <div style={{ position: "relative", zIndex: 1, minHeight: 220, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "1.5rem 1rem", gap: 8 }}>
           <div style={{ color: "#F5F5F0", fontSize: 26, fontWeight: 700, fontFamily: "Georgia, serif", letterSpacing: "0.05em", textShadow: "0 2px 8px rgba(0,0,0,0.7)" }}>
-            Our Road Trip Planner
+            Our Road Trip Planner™
           </div>
           <div style={{ color: "#D85A30", fontSize: 11, fontFamily: "Georgia, serif", letterSpacing: "0.18em" }}>
-            EVERY ROAD · YOUR WAY
+            EVERY ROAD · YOUR WAY™
           </div>
           <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "sans-serif", marginTop: 6, maxWidth: 400 }}>
             AI-powered itineraries built around your real needs
