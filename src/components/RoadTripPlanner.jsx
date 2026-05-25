@@ -284,6 +284,8 @@ Use real town names and businesses. Start directly with Day 1.
 TRIP LENGTH — follow this exactly:
 ${form.ret ? `- Return date is set: plan days accordingly` : `- No return date given: estimate the minimum driving days needed to reach the destination, then add 1 bonus day for exploration. Cap at 6 days total. Do not pad with extra days.`}
 - Prioritize a direct, logical route. Do not add detours or extra overnight stops unless they serve a specific listed interest.
+- CRITICAL: Never revise, renumber, or rewrite days mid-response. If a leg exceeds the drive limit, split it into two days from the start before writing anything. Plan the full route silently first, then write it out cleanly day by day with no revisions shown.
+- Never use the word "REVISED" or show alternative versions of any day.
 
 STYLE — use Option B format for every day:
 - Maximum 4 stops per day — quality over quantity, no cramming
