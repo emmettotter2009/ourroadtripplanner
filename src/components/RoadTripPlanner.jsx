@@ -598,14 +598,19 @@ CONFIDENCE RULES — follow exactly:
         </div>
 
         {streaming && (
-          <div style={{ background: "#f0f7ff", border: "1px solid #dbeafe", borderRadius: 10, padding: "10px 14px", marginBottom: "1rem", fontFamily: "sans-serif", fontSize: 13, color: "#1e40af", display: "flex", gap: 8, alignItems: "center" }}>
-            <div style={{ fontSize: 16, animation: "spin 1s linear infinite", display: "inline-block" }}>🚗</div>
-            <style>{`@keyframes spin { 0%{transform:translateX(-4px)} 50%{transform:translateX(4px)} 100%{transform:translateX(-4px)} }`}</style>
-            Building your itinerary...
+          <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem", fontFamily: "sans-serif" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div style={{ fontSize: 16, animation: "wiggle 1s linear infinite", display: "inline-block" }}>🚗</div>
+              <style>{`@keyframes wiggle { 0%{transform:translateX(-4px)} 50%{transform:translateX(4px)} 100%{transform:translateX(-4px)} }`}</style>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#2563eb" }}>Building your itinerary...</span>
+            </div>
+            <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", maxHeight: 400, overflowY: "auto" }}>
+              {itinerary}
+            </div>
           </div>
         )}
 
-        {days.map((day, i) => {
+        {!streaming && days.map((day, i) => {
           const driveMatch = day.lines.join(" ").match(/(\d+(\.\d+)?(\.5)?\s*([-–]\s*\d+(\.\d+)?)?\s*hours?)/i);
           const driveTime = driveMatch ? driveMatch[1] : null;
           const colors = ["#2563eb","#059669","#7c3aed","#d97706","#dc2626","#0891b2","#65a30d"];
