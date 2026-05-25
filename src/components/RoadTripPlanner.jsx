@@ -318,19 +318,34 @@ CONFIDENCE RULES — follow exactly:
 
   const generate = async () => {
     setLoading(true); setError(null); setItinerary(null);
+    let fullText = "";
     try {
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 4000 }),
+        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 4000, stream: true }),
       });
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-      if (!data.text) throw new Error("No response received.");
-      setItinerary(data.text);
-      saveToHistory(data.text);
-    } catch (e) { setError(e.message); } finally { setLoading(false); }
-  };
 
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || "Request failed");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      setLoading(false);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullText += chunk;
+        setItinerary(fullText);
+      }
+
+      if (!fullText) throw new Error("No response received.");
+      saveToHistory(fullText);
+    } catch (e) { setError(e.message); setLoading(false); }
+  };
   const callAPI = async (prompt) => {
     const resp = await fetch("/api/generate", {
       method: "POST", headers: { "Content-Type": "application/json" },
