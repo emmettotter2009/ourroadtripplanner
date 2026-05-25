@@ -36,10 +36,48 @@ export async function POST(request) {
       );
     }
 
-    const { prompt, messages, maxTokens } = await request.json();
-
+    const { prompt, messages, maxTokens, stream } = await request.json();
     const msgs = messages || [{ role: "user", content: prompt }];
 
+    // Streaming path
+    if (stream) {
+      const encoder = new TextEncoder();
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          try {
+            const anthropicStream = await client.messages.stream({
+              model: "claude-sonnet-4-5",
+              max_tokens: maxTokens || 4000,
+              messages: msgs,
+            });
+
+            for await (const chunk of anthropicStream) {
+              if (
+                chunk.type === "content_block_delta" &&
+                chunk.delta?.type === "text_delta"
+              ) {
+                controller.enqueue(
+                  encoder.encode(chunk.delta.text)
+                );
+              }
+            }
+            controller.close();
+          } catch (err) {
+            controller.error(err);
+          }
+        },
+      });
+
+      return new Response(readableStream, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Transfer-Encoding": "chunked",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
+    // Non-streaming path (used by chat and bonus panels)
     const message = await client.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: maxTokens || 4000,
@@ -48,6 +86,7 @@ export async function POST(request) {
 
     const text = message.content?.find((b) => b.type === "text")?.text || "";
     return Response.json({ text });
+
   } catch (error) {
     console.error("Anthropic API error:", error);
     return Response.json({ error: error.message }, { status: 500 });
