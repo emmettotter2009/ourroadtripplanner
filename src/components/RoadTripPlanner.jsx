@@ -42,9 +42,6 @@ const buildBookingUrl = (city, type = "hotels") => {
   return `${base}?${params}&ued=https%3A%2F%2Fwww.booking.com%2Fsearchresults.html%3Fss%3D${encoded}`;
 };
 
-
-
-
 const FeedbackWidget = ({ trip }) => {
   const [state, setState] = useState("idle");
   const [text, setText] = useState("");
@@ -147,6 +144,7 @@ export default function RoadTripPlanner() {
     interests: [], budget: "moderate", extra: "",
   });
   const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const [itinerary, setItinerary] = useState(null);
   const [error, setError] = useState(null);
   const [kidInput, setKidInput] = useState("");
@@ -317,7 +315,7 @@ CONFIDENCE RULES — follow exactly:
   };
 
   const generate = async () => {
-    setLoading(true); setError(null); setItinerary(null);
+    setLoading(true); setError(null); setItinerary(null); setStreaming(false);
     let fullText = "";
     try {
       const resp = await fetch("/api/generate", {
@@ -333,6 +331,7 @@ CONFIDENCE RULES — follow exactly:
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       setLoading(false);
+      setStreaming(true);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -342,10 +341,12 @@ CONFIDENCE RULES — follow exactly:
         setItinerary(fullText);
       }
 
+      setStreaming(false);
       if (!fullText) throw new Error("No response received.");
       saveToHistory(fullText);
-    } catch (e) { setError(e.message); setLoading(false); }
+    } catch (e) { setError(e.message); setLoading(false); setStreaming(false); }
   };
+
   const callAPI = async (prompt) => {
     const resp = await fetch("/api/generate", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -473,7 +474,6 @@ CONFIDENCE RULES — follow exactly:
         if (cur) days.push(cur);
         cur = { title: t.replace(/^#+\s*/, "").replace(/\*\*/g, "").replace(/^-+\s*/, "").trim(), lines: [], city: "" };
       } else if (cur) {
-        // Extract and store city tag, strip from display
         const cityMatch = t.match(/^\[CITY:([^\]]+)\]$/i);
         if (cityMatch) { cur.city = cityMatch[1].trim(); continue; }
         const cleaned = t.replace(/^#{1,3}\s*/, "").replace(/^-\s+/, "").replace(/^\*\s+/, "").trim();
@@ -544,7 +544,6 @@ CONFIDENCE RULES — follow exactly:
           </div>
         </div>
 
-        {/* Action buttons */}
         <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap", fontFamily: "sans-serif" }}>
           <button onClick={() => setShowEmailForm(v => !v)} style={{ ...btnS, fontSize: 13, padding: "7px 16px" }}>📧 Email my itinerary</button>
           {emailSent && <span style={{ fontSize: 13, color: green, alignSelf: "center" }}>✓ Sent!</span>}
@@ -593,11 +592,18 @@ CONFIDENCE RULES — follow exactly:
           </div>
         )}
 
-        {/* Restaurant disclaimer */}
         <div style={{ background: "#FFF8E7", border: "1px solid #F5E6B8", borderRadius: 10, padding: "10px 14px", marginBottom: "1rem", fontFamily: "sans-serif", fontSize: 13, color: "#78570A", display: "flex", gap: 10, alignItems: "flex-start" }}>
           <span style={{ fontSize: 16, flexShrink: 0 }}>🍽️</span>
           <span><strong>Restaurant tip:</strong> We recommend specific spots to give you a great starting point — always check Google Maps or Yelp to confirm hours and availability before you go. Things change!</span>
         </div>
+
+        {streaming && (
+          <div style={{ background: "#f0f7ff", border: "1px solid #dbeafe", borderRadius: 10, padding: "10px 14px", marginBottom: "1rem", fontFamily: "sans-serif", fontSize: 13, color: "#1e40af", display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ fontSize: 16, animation: "spin 1s linear infinite", display: "inline-block" }}>🚗</div>
+            <style>{`@keyframes spin { 0%{transform:translateX(-4px)} 50%{transform:translateX(4px)} 100%{transform:translateX(-4px)} }`}</style>
+            Building your itinerary...
+          </div>
+        )}
 
         {days.map((day, i) => {
           const driveMatch = day.lines.join(" ").match(/(\d+(\.\d+)?(\.5)?\s*([-–]\s*\d+(\.\d+)?)?\s*hours?)/i);
@@ -606,8 +612,6 @@ CONFIDENCE RULES — follow exactly:
           const color = colors[i % colors.length];
           const isCamping = form.accommodation.some(a => /camp|rv|glamp/i.test(a));
           const dayCity = day.city || form.end.split(",")[0];
-
-          const timeRegex = /^(\d+:\d+\s*(AM|PM))/i;
           const tipRegex = /traveler tip|parent tip/i;
 
           const getIcon = (line) => {
@@ -668,11 +672,9 @@ CONFIDENCE RULES — follow exactly:
                         </div>
                       );
                     }
-
                     const mainLine = item.lines[0] || "";
                     const subLines = item.lines.slice(1);
                     const { icon, bg } = getIcon(mainLine);
-
                     return (
                       <div key={idx} style={{ display: "flex", gap: 12, marginBottom: 4 }}>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 56 }}>
@@ -695,7 +697,6 @@ CONFIDENCE RULES — follow exactly:
                   });
                 })()}
 
-                {/* Per-day affiliate links using structured [CITY:X] tag */}
                 <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 10, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
                   {i > 0 && !isCamping && (
                     <a href={buildBookingUrl(dayCity)} target="_blank" rel="noopener noreferrer"
@@ -709,13 +710,11 @@ CONFIDENCE RULES — follow exactly:
                   </a>
                   <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate links</a></span>
                 </div>
-
               </div>
             </div>
           );
         })}
 
-        {/* Car rental — single link for whole trip */}
         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "0.85rem 1.25rem", marginBottom: "1rem", fontFamily: "sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div>
             <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>🚗 Need a rental car for this trip?</span>
@@ -736,7 +735,6 @@ CONFIDENCE RULES — follow exactly:
           <BonusPanel title="Scenic Route Alternatives" emoji="🏞️" content={scenic} loading={scenicLoading} onFetch={fetchScenic} accentColor="#059669" bgColor="#f0fdf4" />
         </div>
 
-        {/* Road Trip Essentials */}
         <div style={{ marginTop: "1.5rem", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden", fontFamily: "sans-serif" }}>
           <div style={{ background: "#FF9900", padding: "0.85rem 1.25rem", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 20 }}>🛒</span>
@@ -786,7 +784,6 @@ CONFIDENCE RULES — follow exactly:
           </div>
         </div>
 
-        {/* Chat Dialog */}
         <div style={{ marginTop: "1.5rem", border: "1px solid #2563eb", borderRadius: 12, overflow: "hidden", fontFamily: "sans-serif" }}>
           <div onClick={() => setShowChat(v => !v)} style={{ background: "#2563eb", padding: "0.85rem 1.25rem", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>💬 Ask about your trip</span>
@@ -830,10 +827,8 @@ CONFIDENCE RULES — follow exactly:
           )}
         </div>
 
-        {/* Feedback Widget */}
         <FeedbackWidget trip={{ start: form.start, end: form.end, depart: form.depart }} />
 
-        {/* Footer */}
         <div style={{ marginTop: "2rem", padding: "1.25rem", background: "#f9fafb", borderRadius: 10, fontFamily: "sans-serif", fontSize: 12, color: "#9ca3af", lineHeight: 1.7 }}>
           <p style={{ marginBottom: 8 }}>⚠️ <strong style={{ color: "#6b7280" }}>Disclaimer:</strong> This itinerary is AI-generated for planning purposes only. Driving times are estimates — always verify current road conditions, hotel availability, and restaurant hours before your trip. Our Road Trip Planner is not liable for decisions made based on these suggestions.</p>
           <p>🔗 <strong style={{ color: "#6b7280" }}>Affiliate Disclosure:</strong> This site contains affiliate links. We may earn a small commission when you book through our links, at no extra cost to you. This helps keep the planner free!</p>
@@ -850,7 +845,7 @@ CONFIDENCE RULES — follow exactly:
     );
   }
 
-  if (loading) return (
+  if (loading || streaming) return (
     <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "4rem 1rem", fontFamily: "sans-serif" }}>
       <div style={{ fontSize: 40, marginBottom: 16, animation: "spin 1s linear infinite", display: "inline-block" }}>🚗</div>
       <style>{`@keyframes spin { 0%{transform:translateX(-20px)} 50%{transform:translateX(20px)} 100%{transform:translateX(-20px)} }`}</style>
