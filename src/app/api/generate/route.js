@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+export const runtime = "edge";
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
@@ -39,6 +39,10 @@ export async function POST(request) {
     const { prompt, messages, maxTokens, stream } = await request.json();
     const msgs = messages || [{ role: "user", content: prompt }];
 
+    const client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
     // Streaming path
     if (stream) {
       const encoder = new TextEncoder();
@@ -56,9 +60,7 @@ export async function POST(request) {
                 chunk.type === "content_block_delta" &&
                 chunk.delta?.type === "text_delta"
               ) {
-                controller.enqueue(
-                  encoder.encode(chunk.delta.text)
-                );
+                controller.enqueue(encoder.encode(chunk.delta.text));
               }
             }
             controller.close();
@@ -71,13 +73,13 @@ export async function POST(request) {
       return new Response(readableStream, {
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
-          "Transfer-Encoding": "chunked",
           "X-Accel-Buffering": "no",
+          "Cache-Control": "no-cache",
         },
       });
     }
 
-    // Non-streaming path (used by chat and bonus panels)
+    // Non-streaming path
     const message = await client.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: maxTokens || 4000,
