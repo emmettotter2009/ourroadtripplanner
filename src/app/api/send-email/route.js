@@ -1,10 +1,60 @@
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(3, "1 h"),
+  analytics: true,
+});
+
+const isValidEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length < 254;
+};
+
 export async function POST(request) {
   try {
-    const { to, subject, itinerary, trip } = await request.json();
-    if (!to || !itinerary) return Response.json({ error: "Missing email or itinerary" }, { status: 400 });
-    const RESEND_KEY = process.env.RESEND_API_KEY;
-    if (!RESEND_KEY) return Response.json({ error: "Email not configured yet" }, { status: 500 });
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "anonymous";
 
+    const { success } = await ratelimit.limit(`email:${ip}`);
+    if (!success) {
+      return Response.json(
+        { error: "Too many email requests — please wait before trying again." },
+        { status: 429 }
+      );
+    }
+
+    const { to, subject, itinerary, trip } = await request.json();
+
+    if (!to || !itinerary) {
+      return Response.json(
+        { error: "Missing email or itinerary" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(to)) {
+      return Response.json(
+        { error: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
+
+    if (itinerary.length > 50000) {
+      return Response.json(
+        { error: "Itinerary too large to send." },
+        { status: 400 }
+      );
+    }
+
+    const RESEND_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_KEY)
+      return Response.json(
+        { error: "Email not configured yet" },
+        { status: 500 }
+      );
     const AWIN_ID = "2880651";
     const AWIN_MID = "6776";
     const GYG_PARTNER_ID = "CKJU4TS";
