@@ -144,7 +144,6 @@ export default function RoadTripPlanner() {
     interests: [], budget: "moderate", extra: "",
   });
   const [loading, setLoading] = useState(false);
-  const [streaming, setStreaming] = useState(false);
   const [itinerary, setItinerary] = useState(null);
   const [error, setError] = useState(null);
   const [kidInput, setKidInput] = useState("");
@@ -315,36 +314,18 @@ CONFIDENCE RULES — follow exactly:
   };
 
   const generate = async () => {
-    setLoading(true); setError(null); setItinerary(null); setStreaming(false);
-    let fullText = "";
+    setLoading(true); setError(null); setItinerary(null);
     try {
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 4000, stream: true }),
+        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 4000 }),
       });
-
-      if (!resp.ok) {
-        const data = await resp.json();
-        throw new Error(data.error || "Request failed");
-      }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      setLoading(false);
-      setStreaming(true);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        fullText += chunk;
-        setItinerary(fullText);
-      }
-
-      setStreaming(false);
-      if (!fullText) throw new Error("No response received.");
-      saveToHistory(fullText);
-    } catch (e) { setError(e.message); setLoading(false); setStreaming(false); }
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      if (!data.text) throw new Error("No response received.");
+      setItinerary(data.text);
+      saveToHistory(data.text);
+    } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
   const callAPI = async (prompt) => {
@@ -597,20 +578,9 @@ CONFIDENCE RULES — follow exactly:
           <span><strong>Restaurant tip:</strong> We recommend specific spots to give you a great starting point — always check Google Maps or Yelp to confirm hours and availability before you go. Things change!</span>
         </div>
 
-        {streaming && (
-          <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem", fontFamily: "sans-serif" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div style={{ fontSize: 16, animation: "wiggle 1s linear infinite", display: "inline-block" }}>🚗</div>
-              <style>{`@keyframes wiggle { 0%{transform:translateX(-4px)} 50%{transform:translateX(4px)} 100%{transform:translateX(-4px)} }`}</style>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#2563eb" }}>Building your itinerary...</span>
-            </div>
-            <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", maxHeight: 400, overflowY: "auto" }}>
-              {itinerary}
-            </div>
-          </div>
-        )}
+        
 
-        {!streaming && days.map((day, i) => {
+        {days.map((day, i) => {
           const driveMatch = day.lines.join(" ").match(/(\d+(\.\d+)?(\.5)?\s*([-–]\s*\d+(\.\d+)?)?\s*hours?)/i);
           const driveTime = driveMatch ? driveMatch[1] : null;
           const colors = ["#2563eb","#059669","#7c3aed","#d97706","#dc2626","#0891b2","#65a30d"];
@@ -850,7 +820,7 @@ CONFIDENCE RULES — follow exactly:
     );
   }
 
-  if (loading || streaming) return (
+  if (loading) return (
     <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "4rem 1rem", fontFamily: "sans-serif" }}>
       <div style={{ fontSize: 40, marginBottom: 16, animation: "spin 1s linear infinite", display: "inline-block" }}>🚗</div>
       <style>{`@keyframes spin { 0%{transform:translateX(-20px)} 50%{transform:translateX(20px)} 100%{transform:translateX(-20px)} }`}</style>
