@@ -375,12 +375,23 @@ CONFIDENCE RULES — follow exactly:
     setChatMessages(prev => [...prev, { role: "user", content: userMsg }]);
     setChatLoading(true);
     try {
-      const context = `You are a helpful road trip assistant. The traveler has this itinerary:\n\n${itinerary}\n\nTrip details: From ${form.start} to ${form.end}${form.depart ? `, departing ${form.depart}` : ""}. ${form.withKids ? `Traveling with kids ages: ${form.kids.join(", ")}` : "Adults only trip"}. Vehicle: ${form.vehicle || "not specified"}. Budget: ${form.budget}.\n\nAnswer their question helpfully and specifically based on their itinerary. Be friendly and concise.`;
+      // Compact itinerary summary instead of full text
+      const days = parseDays(itinerary);
+      const compactItinerary = days.map(d => 
+        `${d.title} (${d.city}): ${d.lines.slice(0, 3).join(" | ")}`
+      ).join("\n");
+
+      const context = `You are a helpful road trip assistant. Here is a compact summary of the traveler's itinerary:\n\n${compactItinerary}\n\nTrip: From ${form.start} to ${form.end}${form.depart ? `, departing ${form.depart}` : ""}. ${form.withKids ? `Traveling with kids ages: ${form.kids.join(", ")}` : "Adults only"}. Vehicle: ${form.vehicle || "not specified"}. Budget: ${form.budget}.\n\nAnswer helpfully and concisely based on this itinerary.`;
+
+      // Cap history to last 6 messages only
+      const recentHistory = chatMessages.slice(-6);
+
       const messages = [
         { role: "user", content: context },
-        ...chatMessages.map(m => ({ role: m.role, content: m.content })),
+        ...recentHistory.map(m => ({ role: m.role, content: m.content })),
         { role: "user", content: userMsg }
       ];
+
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages, maxTokens: 1000 }),
@@ -394,7 +405,6 @@ CONFIDENCE RULES — follow exactly:
       setChatLoading(false);
     }
   };
-
   const downloadPDF = () => {
     const printWindow = window.open('', '_blank');
     const days = parseDays(itinerary);
