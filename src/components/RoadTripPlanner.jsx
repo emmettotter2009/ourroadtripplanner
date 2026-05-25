@@ -319,7 +319,7 @@ CONFIDENCE RULES — follow exactly:
     try {
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 8000 }),
+        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 4000 }),
       });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
@@ -332,7 +332,7 @@ CONFIDENCE RULES — follow exactly:
   const callAPI = async (prompt) => {
     const resp = await fetch("/api/generate", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, maxTokens: 4000 }),
+      body: JSON.stringify({ prompt, maxTokens: 2000 }),
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
