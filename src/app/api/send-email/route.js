@@ -63,7 +63,20 @@ export async function POST(request) {
     const buildExpediaUrl = (destPath) =>
       `https://www.anrdoezrs.net/click-${EXPEDIA_CID}-${EXPEDIA_LINK_ID}?url=${encodeURIComponent("https://www.expedia.com" + destPath)}`;
 
-    const buildHotelUrl = (city) => buildExpediaUrl(`/Hotel-Search?destination=${city || ""}`);
+    // Add days to a YYYY-MM-DD date string, returning YYYY-MM-DD (or "" if no/invalid date)
+    const addDays = (isoDate, days) => {
+      if (!isoDate) return "";
+      const d = new Date(isoDate + "T00:00:00");
+      if (isNaN(d.getTime())) return "";
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+
+    const buildHotelUrl = (city, checkIn, checkOut) => {
+      let path = `/Hotel-Search?destination=${city || ""}`;
+      if (checkIn && checkOut) path += `&startDate=${checkIn}&endDate=${checkOut}`;
+      return buildExpediaUrl(path);
+    };
 
     const buildGYGUrl = (city) => {
       const encoded = encodeURIComponent(city);
@@ -89,7 +102,7 @@ export async function POST(request) {
           <span style="color: #6b7280; font-size: 12px;">${night.city}</span>
         </td>
         <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; text-align: right; white-space: nowrap;">
-          ${i > 0 ? `<a href="${buildHotelUrl(night.city)}" style="color: #D85A30; text-decoration: none; font-size: 13px; margin-right: 12px;">🏨 Hotels</a>` : ""}
+          ${i > 0 ? `<a href="${buildHotelUrl(night.city, addDays(trip.depart, i), addDays(trip.depart, i + 1))}" style="color: #D85A30; text-decoration: none; font-size: 13px; margin-right: 12px;">🏨 Hotels</a>` : ""}
           <a href="${buildGYGUrl(night.city)}" style="color: #D85A30; text-decoration: none; font-size: 13px;">🎟️ Activities</a>
         </td>
       </tr>
