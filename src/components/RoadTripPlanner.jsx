@@ -36,11 +36,22 @@ const EXPEDIA_LINK_ID = "10581071";
 const buildExpediaUrl = (destPath) =>
   `https://www.anrdoezrs.net/click-${EXPEDIA_CID}-${EXPEDIA_LINK_ID}?url=${encodeURIComponent("https://www.expedia.com" + destPath)}`;
 
-const buildBookingUrl = (city, type = "hotels") => {
+// Add days to a YYYY-MM-DD date string, returning YYYY-MM-DD (or "" if no/invalid date)
+const addDays = (isoDate, days) => {
+  if (!isoDate) return "";
+  const d = new Date(isoDate + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+const buildBookingUrl = (city, type = "hotels", checkIn = "", checkOut = "") => {
   if (type === "cars") {
     return buildExpediaUrl("/Cars");
   }
-  return buildExpediaUrl(`/Hotel-Search?destination=${city || ""}`);
+  let path = `/Hotel-Search?destination=${city || ""}`;
+  if (checkIn && checkOut) path += `&startDate=${checkIn}&endDate=${checkOut}`;
+  return buildExpediaUrl(path);
 };
 
 const FeedbackWidget = ({ trip }) => {
@@ -685,7 +696,7 @@ CONFIDENCE RULES — follow exactly:
 
                 <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 10, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
                   {i > 0 && !isCamping && (
-                    <a href={buildBookingUrl(dayCity)} target="_blank" rel="noopener noreferrer"
+                    <a href={buildBookingUrl(dayCity, "hotels", addDays(form.depart, i), addDays(form.depart, i + 1))} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       🏨 Search hotels in {dayCity}
                     </a>
@@ -720,55 +731,6 @@ CONFIDENCE RULES — follow exactly:
         </div>
 
         <div style={{ marginTop: "1.5rem", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden", fontFamily: "sans-serif" }}>
-          <div style={{ background: "#FF9900", padding: "0.85rem 1.25rem", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>🛒</span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>Road Trip Essentials</span>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", marginLeft: "auto" }}>Shop on Amazon</span>
-          </div>
-          <div style={{ padding: "1rem 1.25rem", background: "white" }}>
-            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>Packing for your trip? Here are some essentials other road trippers love:</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {[
-                ...(!form.withKids ? [] : [
-                  { emoji: "🎮", label: "Kids Road Trip Games", q: "kids+road+trip+games+car" },
-                  { emoji: "🎧", label: "Kids Headphones", q: "kids+headphones+road+trip" },
-                ]),
-                ...(form.withKids ? [] : [
-                  { emoji: "🎵", label: "Bluetooth Speaker", q: "portable+bluetooth+speaker+outdoor" },
-                  { emoji: "🍷", label: "Travel Wine Accessories", q: "travel+wine+accessories" },
-                ]),
-                ...(form.vehicle === "motorcycle" ? [
-                  { emoji: "🎒", label: "Motorcycle Saddlebags", q: "motorcycle+saddlebags+luggage" },
-                  { emoji: "🧤", label: "Riding Gloves", q: "motorcycle+riding+gloves" },
-                ] : [
-                  { emoji: "📱", label: "Phone Car Mount", q: "phone+car+mount+magnetic" },
-                  { emoji: "🧊", label: "Portable Car Cooler", q: "portable+car+cooler+12v" },
-                ]),
-                ...(form.accommodation.some(a => /camp/i.test(a)) ? [
-                  { emoji: "🏕️", label: "Camping Chairs", q: "portable+camping+chairs+lightweight" },
-                  { emoji: "🔦", label: "Camping Lantern", q: "camping+lantern+led+rechargeable" },
-                ] : [
-                  { emoji: "🎒", label: "Car Seat Organizer", q: "car+seat+back+organizer" },
-                  { emoji: "🗺️", label: "Road Atlas USA", q: "road+atlas+united+states+2024" },
-                ]),
-                { emoji: "🧴", label: "Travel Toiletry Kit", q: "travel+toiletry+bag+toiletries" },
-                { emoji: "💊", label: "Motion Sickness Relief", q: "motion+sickness+relief+travel" },
-              ].map(({ emoji, label, q }) => (
-                <a key={q} href={`https://www.amazon.com/s?k=${q}&tag=ourroadtrippl-20`} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #e5e7eb", textDecoration: "none", background: "#fafafa", transition: "all 0.15s" }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "#FF9900"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}
-                >
-                  <span style={{ fontSize: 18 }}>{emoji}</span>
-                  <span style={{ fontSize: 12, color: "#374151", fontWeight: 500 }}>{label}</span>
-                </a>
-              ))}
-            </div>
-            <p style={{ fontSize: 11, color: "#d1d5db", marginTop: 10, textAlign: "center" }}>As an Amazon Associate we earn from qualifying purchases.</p>
-          </div>
-        </div>
-
-        <div style={{ marginTop: "1.5rem", border: "1px solid #2563eb", borderRadius: 12, overflow: "hidden", fontFamily: "sans-serif" }}>
           <div onClick={() => setShowChat(v => !v)} style={{ background: "#2563eb", padding: "0.85rem 1.25rem", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>💬 Ask about your trip</span>
             <span style={{ color: "white", fontSize: 18 }}>{showChat ? "▼" : "▲"}</span>
