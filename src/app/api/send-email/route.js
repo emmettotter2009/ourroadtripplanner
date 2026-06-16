@@ -55,8 +55,6 @@ export async function POST(request) {
         { error: "Email not configured yet" },
         { status: 500 }
       );
-    const AWIN_ID = "2880651";
-    const AWIN_MID = "6776";
     const GYG_PARTNER_ID = "CKJU4TS";
     const EXPEDIA_CID = "101740591";
     const EXPEDIA_LINK_ID = "10581071";
@@ -72,8 +70,7 @@ export async function POST(request) {
       return `https://www.getyourguide.com/s/?q=${encoded}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher`;
     };
 
-    const buildCarUrl = () =>
-      `https://www.awin1.com/cread.php?awinmid=${AWIN_MID}&awinaffid=${AWIN_ID}&campaign=CarRentals&ued=https%3A%2F%2Fwww.booking.com%2Fcars%2Findex.html`;
+    const buildCarUrl = () => buildExpediaUrl("/Cars");
 
     // Extract [CITY:X] tags and day titles from itinerary
     const cityMatches = [...itinerary.matchAll(/\[CITY:([^\]]+)\]/gi)];
@@ -116,6 +113,9 @@ export async function POST(request) {
             </td>
           </tr>
         </table>
+        <div style="padding: 8px 12px; background: #f9fafb; border-top: 1px solid #f3f4f6;">
+          <p style="font-size: 11px; color: #9ca3af; margin: 0;">Affiliate links — we may earn a small commission at no cost to you. <a href="https://ourroadtripplanner.com/affiliate-disclosure" style="color: #9ca3af;">Learn more</a></p>
+        </div>
       </div>
     ` : "";
 

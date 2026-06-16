@@ -29,8 +29,6 @@ const inputStyle = {
 };
 
 const DRAFT_KEY = "roadtrip_draft";
-const AWIN_ID = "2880651";
-const AWIN_MID = "6776";
 const EXPEDIA_CID = "101740591";
 const EXPEDIA_LINK_ID = "10581071";
 
@@ -40,9 +38,7 @@ const buildExpediaUrl = (destPath) =>
 
 const buildBookingUrl = (city, type = "hotels") => {
   if (type === "cars") {
-    const base = "https://www.awin1.com/cread.php";
-    const params = `awinmid=${AWIN_MID}&awinaffid=${AWIN_ID}`;
-    return `${base}?${params}&campaign=CarRentals&ued=https%3A%2F%2Fwww.booking.com%2Fcars%2Findex.html`;
+    return buildExpediaUrl("/Cars");
   }
   return buildExpediaUrl(`/Hotel-Search?destination=${city || ""}`);
 };
@@ -952,7 +948,7 @@ CONFIDENCE RULES — follow exactly:
                 {v:"AWD/4WD", icon:"🚙", l:"SUV / AWD"},
                 {v:"electric vehicle", icon:"⚡", l:"Electric"},
                 {v:"RV or camper van", icon:"🚐", l:"RV / Van"},
-                {v:"truck", icon:"🛋", l:"Truck"},
+                {v:"truck", icon:"🛻", l:"Truck"},
               ].map(({v, icon, l}) => (
                 <button key={v} onClick={() => upd("vehicle", form.vehicle === v ? "" : v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.vehicle === v ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.vehicle === v ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
                   <span style={{ fontSize: 24 }}>{icon}</span>
