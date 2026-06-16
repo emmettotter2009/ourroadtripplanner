@@ -31,7 +31,12 @@ const inputStyle = {
 const DRAFT_KEY = "roadtrip_draft";
 const AWIN_ID = "2880651";
 const AWIN_MID = "6776";
-const EXPEDIA_HOTEL_URL = "https://www.dpbolvw.net/click-101740591-14078545";
+const EXPEDIA_CID = "101740591";
+const EXPEDIA_LINK_ID = "10581071";
+
+// CJ deep link: wraps an Expedia destination URL so the affiliate cookie is set on redirect
+const buildExpediaUrl = (destPath) =>
+  `https://www.anrdoezrs.net/click-${EXPEDIA_CID}-${EXPEDIA_LINK_ID}?url=${encodeURIComponent("https://www.expedia.com" + destPath)}`;
 
 const buildBookingUrl = (city, type = "hotels") => {
   if (type === "cars") {
@@ -39,7 +44,7 @@ const buildBookingUrl = (city, type = "hotels") => {
     const params = `awinmid=${AWIN_MID}&awinaffid=${AWIN_ID}`;
     return `${base}?${params}&campaign=CarRentals&ued=https%3A%2F%2Fwww.booking.com%2Fcars%2Findex.html`;
   }
-  return EXPEDIA_HOTEL_URL;
+  return buildExpediaUrl(`/Hotel-Search?destination=${city || ""}`);
 };
 
 const FeedbackWidget = ({ trip }) => {
@@ -693,7 +698,6 @@ CONFIDENCE RULES — follow exactly:
                     style={{ fontSize: 13, color: "#D85A30", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
                     🎟️ Things to do in {dayCity}
                   </a>
-                  <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate links</a></span>
                 </div>
               </div>
             </div>
@@ -710,7 +714,6 @@ CONFIDENCE RULES — follow exactly:
               style={{ fontSize: 13, color: "#D85A30", textDecoration: "none" }}>
               Compare car rentals
             </a>
-            <span style={{ fontSize: 11, color: "#9ca3af" }}>· <a href="/affiliate-disclosure" style={{ color: "#9ca3af", textDecoration: "none" }}>affiliate link</a></span>
           </div>
         </div>
 
@@ -949,7 +952,7 @@ CONFIDENCE RULES — follow exactly:
                 {v:"AWD/4WD", icon:"🚙", l:"SUV / AWD"},
                 {v:"electric vehicle", icon:"⚡", l:"Electric"},
                 {v:"RV or camper van", icon:"🚐", l:"RV / Van"},
-                {v:"truck", icon:"🛻", l:"Truck"},
+                {v:"truck", icon:"🛋", l:"Truck"},
               ].map(({v, icon, l}) => (
                 <button key={v} onClick={() => upd("vehicle", form.vehicle === v ? "" : v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.vehicle === v ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.vehicle === v ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
                   <span style={{ fontSize: 24 }}>{icon}</span>
@@ -1008,7 +1011,7 @@ CONFIDENCE RULES — follow exactly:
           <Field label="Travel considerations">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
               {(form.withKids
-                ? [{v:"motion sickness", icon:"🤢"},{v:"frequent bathroom breaks", icon:"🚻"},{v:"restless kids", icon:"😤"},{v:"baby or toddler", icon:"👶"},{v:"traveling with a pet", icon:"🐾"},{v:"allergies or medical needs", icon:"💊"}]
+                ? [{v:"motion sickness", icon:"🤢"},{v:"frequent bathroom breaks", icon:"🚺"},{v:"restless kids", icon:"😤"},{v:"baby or toddler", icon:"👶"},{v:"traveling with a pet", icon:"🐾"},{v:"allergies or medical needs", icon:"💊"}]
                 : [{v:"traveling with a pet", icon:"🐾"},{v:"mobility considerations", icon:"♿"},{v:"prefer avoiding highways", icon:"🛣️"},{v:"large group", icon:"👥"},{v:"first time on this route", icon:"🗺️"},{v:"allergies or medical needs", icon:"💊"}]
               ).map(({v, icon}) => (
                 <button key={v} onClick={() => toggleArr("considerations", v)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px 8px", border: form.considerations.includes(v) ? "2px solid #2563eb" : "1px solid #d1d5db", borderRadius: 10, background: form.considerations.includes(v) ? "#dbeafe" : "white", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textAlign: "center" }}>

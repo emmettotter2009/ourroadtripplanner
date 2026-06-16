@@ -58,9 +58,14 @@ export async function POST(request) {
     const AWIN_ID = "2880651";
     const AWIN_MID = "6776";
     const GYG_PARTNER_ID = "CKJU4TS";
-    const EXPEDIA_HOTEL_URL = "https://www.dpbolvw.net/click-101740591-14078545";
+    const EXPEDIA_CID = "101740591";
+    const EXPEDIA_LINK_ID = "10581071";
 
-    const buildHotelUrl = () => EXPEDIA_HOTEL_URL;
+    // CJ deep link: wraps an Expedia destination URL so the affiliate cookie is set on redirect
+    const buildExpediaUrl = (destPath) =>
+      `https://www.anrdoezrs.net/click-${EXPEDIA_CID}-${EXPEDIA_LINK_ID}?url=${encodeURIComponent("https://www.expedia.com" + destPath)}`;
+
+    const buildHotelUrl = (city) => buildExpediaUrl(`/Hotel-Search?destination=${city || ""}`);
 
     const buildGYGUrl = (city) => {
       const encoded = encodeURIComponent(city);
@@ -87,7 +92,7 @@ export async function POST(request) {
           <span style="color: #6b7280; font-size: 12px;">${night.city}</span>
         </td>
         <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; text-align: right; white-space: nowrap;">
-          ${i > 0 ? `<a href="${buildHotelUrl()}" style="color: #D85A30; text-decoration: none; font-size: 13px; margin-right: 12px;">🏨 Hotels</a>` : ""}
+          ${i > 0 ? `<a href="${buildHotelUrl(night.city)}" style="color: #D85A30; text-decoration: none; font-size: 13px; margin-right: 12px;">🏨 Hotels</a>` : ""}
           <a href="${buildGYGUrl(night.city)}" style="color: #D85A30; text-decoration: none; font-size: 13px;">🎟️ Activities</a>
         </td>
       </tr>
@@ -111,9 +116,6 @@ export async function POST(request) {
             </td>
           </tr>
         </table>
-        <div style="padding: 8px 12px; background: #f9fafb; border-top: 1px solid #f3f4f6;">
-          <p style="font-size: 11px; color: #9ca3af; margin: 0;">Affiliate links — we may earn a small commission at no cost to you. <a href="https://ourroadtripplanner.com/affiliate-disclosure" style="color: #9ca3af;">Learn more</a></p>
-        </div>
       </div>
     ` : "";
 
