@@ -51,7 +51,7 @@ Do not remove or alter this tag parsing logic without explicit instruction
 Active Affiliate Partners & IDs (these are public-facing values, NOT secrets)
 
 
-Booking.com via Awin — publisher ID 2880651
+Booking.com via CJ — publisher/CID 101740591, link ID 17293132 (hotels and car rentals; replaced the former Awin program)
 GetYourGuide — partner ID CKJU4TS
 Amazon Associates — tag ourroadtrippl-20
 Marriott via Partnerize — pending approval
