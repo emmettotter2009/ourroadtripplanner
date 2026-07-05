@@ -56,12 +56,12 @@ export async function POST(request) {
         { status: 500 }
       );
     const GYG_PARTNER_ID = "CKJU4TS";
-    const EXPEDIA_CID = "101740591";
-    const EXPEDIA_LINK_ID = "10581071";
+    const CJ_CID = "101740591";
+    const BOOKING_LINK_ID = "17293132";
 
-    // CJ deep link: wraps an Expedia destination URL so the affiliate cookie is set on redirect
-    const buildExpediaUrl = (destPath) =>
-      `https://www.anrdoezrs.net/click-${EXPEDIA_CID}-${EXPEDIA_LINK_ID}?url=${encodeURIComponent("https://www.expedia.com" + destPath)}`;
+    // CJ deep link: wraps a Booking.com destination URL so the affiliate cookie is set on redirect
+    const buildBookingDeepLink = (bookingUrl) =>
+      `https://www.kqzyfj.com/click-${CJ_CID}-${BOOKING_LINK_ID}?url=${encodeURIComponent(bookingUrl)}`;
 
     // Add days to a YYYY-MM-DD date string, returning YYYY-MM-DD (or "" if no/invalid date)
     const addDays = (isoDate, days) => {
@@ -73,9 +73,9 @@ export async function POST(request) {
     };
 
     const buildHotelUrl = (city, checkIn, checkOut) => {
-      let path = `/Hotel-Search?destination=${city || ""}`;
-      if (checkIn && checkOut) path += `&startDate=${checkIn}&endDate=${checkOut}`;
-      return buildExpediaUrl(path);
+      let dest = `https://www.booking.com/searchresults.html?ss=${city || ""}`;
+      if (checkIn && checkOut) dest += `&checkin=${checkIn}&checkout=${checkOut}`;
+      return buildBookingDeepLink(dest);
     };
 
     const buildGYGUrl = (city) => {
@@ -83,7 +83,7 @@ export async function POST(request) {
       return `https://www.getyourguide.com/s/?q=${encoded}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher`;
     };
 
-    const buildCarUrl = () => buildExpediaUrl("/Cars");
+    const buildCarUrl = () => buildBookingDeepLink("https://www.booking.com/cars/index.html");
 
     // Extract [CITY:X] tags and day titles from itinerary
     const cityMatches = [...itinerary.matchAll(/\[CITY:([^\]]+)\]/gi)];
