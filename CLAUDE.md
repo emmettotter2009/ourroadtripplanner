@@ -12,7 +12,7 @@ Tech Stack
 
 Framework: Next.js (App Router)
 Deployment: Vercel (Hobby plan, auto-deploy from main)
-AI: Anthropic Claude API — model claude-sonnet-4-5 via ANTHROPIC_API_KEY
+AI: Anthropic Claude API — model claude-sonnet-5-5 via ANTHROPIC_API_KEY (migrated from claude-sonnet-4-5, which retires Nov 30, 2026)
 Email: Resend (RESEND_API_KEY) — domain verified
 Rate limiting: Upstash Redis (UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN)
 Analytics: Google Analytics G-3KW7DZZNPL via Next.js Script component
@@ -33,7 +33,10 @@ Key Files to Know
 
 
 components/RoadTripPlanner.jsx — main UI component (~1,200 lines, refactor is a known task)
-app/api/ — API routes (itinerary generation, email send, feedback)
+app/api/ — API routes (itinerary generation, email send; feedback is sent through send-email)
+lib/aiRequest.js — server-side rules for Claude calls: model, thinking setting, token limits per request kind, validation, usage/cost logging
+lib/emailSafety.js — HTML escaping and misuse checks for the email route
+tests/ — unit tests (run with: npm test)
 app/page.js — homepage
 
 
@@ -71,8 +74,10 @@ All secrets in Vercel environment variables only — never in code or repo
 AI / API Configuration
 
 
-Model: claude-sonnet-4-5
-max_tokens is intentionally reduced for cost control — do not increase without asking
+Model: claude-sonnet-5-5, thinking: { type: "between_tools" } (no up-front thinking; Sonnet 5.5 otherwise thinks by default and bills it as output)
+max_tokens is set on the SERVER per request kind in lib/aiRequest.js (itinerary 5200, markers 2600, scenic 2600, chat 1300). These are the old 4.5 limits x 1.3 for the new tokenizer. The browser's value is ignored. Do not increase without asking
+Incomplete (max_tokens), refused, or malformed itineraries are returned as errors and never shown, saved, or emailed
+Each Claude call logs one JSON line (event ortp_ai_usage) with token counts and estimated cost; no prompt text, no traveler data, no IP
 Auto-reload for Anthropic credits is disabled — do not enable it
 Streaming was evaluated and reverted — the UX is spinner-then-full-render, not streaming
 Chat context: compact per-day summary + last 6 messages

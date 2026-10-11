@@ -330,7 +330,7 @@ CONFIDENCE RULES — follow exactly:
     try {
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt(), maxTokens: 4000 }),
+        body: JSON.stringify({ kind: "itinerary", prompt: buildPrompt() }),
       });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
@@ -340,10 +340,10 @@ CONFIDENCE RULES — follow exactly:
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
-  const callAPI = async (prompt) => {
+  const callAPI = async (prompt, kind) => {
     const resp = await fetch("/api/generate", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, maxTokens: 2000 }),
+      body: JSON.stringify({ kind, prompt }),
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
@@ -353,7 +353,7 @@ CONFIDENCE RULES — follow exactly:
   const fetchMarkers = async () => {
     setMarkersLoading(true); setMarkers(null);
     try {
-      const text = await callAPI(`You are a knowledgeable road trip historian. For travelers driving from ${form.start} to ${form.end}${form.stops ? ` with stops at ${form.stops}` : ""}, list notable historical markers, monuments, and points of interest along the way. For each: name and location, 2-3 sentence significance, stop required or visible from road, interest rating 1-5 stars with reason. Group by region. Start directly with first marker.`);
+      const text = await callAPI(`You are a knowledgeable road trip historian. For travelers driving from ${form.start} to ${form.end}${form.stops ? ` with stops at ${form.stops}` : ""}, list notable historical markers, monuments, and points of interest along the way. For each: name and location, 2-3 sentence significance, stop required or visible from road, interest rating 1-5 stars with reason. Group by region. Start directly with first marker.`, "markers");
       setMarkers(text);
     } catch(e) { setMarkers("Error: " + e.message); } finally { setMarkersLoading(false); }
   };
@@ -361,7 +361,7 @@ CONFIDENCE RULES — follow exactly:
   const fetchScenic = async () => {
     setScenicLoading(true); setScenic(null);
     try {
-      const text = await callAPI(`You are an expert on scenic byways. For a road trip from ${form.start} to ${form.end}${form.stops ? ` via ${form.stops}` : ""}${form.vehicle ? ` by ${form.vehicle}` : ""}, suggest alternate scenic routes for specific days. For each: which day/segment, route name, extra time added, what makes it worth it, ${form.vehicle === "motorcycle" ? "motorcycle suitability" : "ease of drive"}, one dont-miss moment. Start directly with first suggestion.`);
+      const text = await callAPI(`You are an expert on scenic byways. For a road trip from ${form.start} to ${form.end}${form.stops ? ` via ${form.stops}` : ""}${form.vehicle ? ` by ${form.vehicle}` : ""}, suggest alternate scenic routes for specific days. For each: which day/segment, route name, extra time added, what makes it worth it, ${form.vehicle === "motorcycle" ? "motorcycle suitability" : "ease of drive"}, one dont-miss moment. Start directly with first suggestion.`, "scenic");
       setScenic(text);
     } catch(e) { setScenic("Error: " + e.message); } finally { setScenicLoading(false); }
   };
@@ -406,7 +406,7 @@ CONFIDENCE RULES — follow exactly:
 
       const resp = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, maxTokens: 1000 }),
+        body: JSON.stringify({ kind: "chat", messages }),
       });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);

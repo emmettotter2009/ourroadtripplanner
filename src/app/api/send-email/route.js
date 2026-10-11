@@ -1,5 +1,12 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import {
+  FEEDBACK_ADDRESS,
+  escapeHtml,
+  cleanField,
+  itineraryToEmailHtml,
+  rejectReason,
+} from "../../../lib/emailSafety";
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
@@ -7,8 +14,25 @@ const ratelimit = new Ratelimit({
   analytics: true,
 });
 
-const isValidEmail = (email) => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length < 254;
+// Site-wide ceiling on emails per day, so a spread-out abuse attempt cannot
+// burn the sending quota or the domain's reputation. Adjust with the
+// EMAIL_DAILY_CAP environment variable if real usage ever approaches it.
+const DAILY_CAP = Number(process.env.EMAIL_DAILY_CAP) || 150;
+const dailyLimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.fixedWindow(DAILY_CAP, "1 d"),
+  prefix: "ortp_email_daily",
+});
+
+const ENV = process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown";
+const logEmail = (outcome, reason = null) =>
+  console.log(JSON.stringify({ event: "ortp_email", outcome, reason, env: ENV }));
+
+const REJECT_MESSAGES = {
+  missing_fields: { status: 400, error: "Missing email or itinerary" },
+  invalid_email: { status: 400, error: "Please enter a valid email address." },
+  too_large: { status: 400, error: "Itinerary too large to send." },
+  not_an_itinerary: { status: 400, error: "We could only send a trip itinerary to that address." },
 };
 
 export async function POST(request) {
@@ -20,32 +44,52 @@ export async function POST(request) {
 
     const { success } = await ratelimit.limit(`email:${ip}`);
     if (!success) {
+      logEmail("rejected", "rate_limited");
       return Response.json(
         { error: "Too many email requests — please wait before trying again." },
         { status: 429 }
       );
     }
 
-    const { to, subject, itinerary, trip } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      logEmail("rejected", "invalid_json");
+      return Response.json({ error: "Missing email or itinerary" }, { status: 400 });
+    }
+    const to = typeof body?.to === "string" ? body.to.trim() : "";
+    const itinerary = typeof body?.itinerary === "string" ? body.itinerary : "";
 
-    if (!to || !itinerary) {
-      return Response.json(
-        { error: "Missing email or itinerary" },
-        { status: 400 }
-      );
+    const reason = rejectReason({ to, itinerary });
+    if (reason) {
+      logEmail("rejected", reason);
+      const { status, error } = REJECT_MESSAGES[reason];
+      return Response.json({ error }, { status });
     }
 
-    if (!isValidEmail(to)) {
-      return Response.json(
-        { error: "Please enter a valid email address." },
-        { status: 400 }
-      );
-    }
+    // Trip details are plain text only, trimmed and length-capped.
+    const rawTrip = body?.trip && typeof body.trip === "object" ? body.trip : {};
+    const trip = {
+      start: cleanField(rawTrip.start),
+      end: cleanField(rawTrip.end),
+      depart: /^\d{4}-\d{2}-\d{2}$/.test(rawTrip.depart || "") ? rawTrip.depart : "",
+    };
 
-    if (itinerary.length > 50000) {
+    // Visitors' itineraries get a subject built here, so the endpoint can't be
+    // used to send arbitrary subject lines. Feedback notes keep theirs (they
+    // only ever reach our own inbox).
+    const isFeedback = to.toLowerCase() === FEEDBACK_ADDRESS;
+    const subject = isFeedback
+      ? cleanField(body?.subject, 150) || "Feedback"
+      : `Your Road Trip: ${trip.start} to ${trip.end}`.slice(0, 150);
+
+    const { success: underDailyCap } = await dailyLimit.limit("all");
+    if (!underDailyCap) {
+      logEmail("rejected", "daily_cap");
       return Response.json(
-        { error: "Itinerary too large to send." },
-        { status: 400 }
+        { error: "We've hit today's email limit. Please use the PDF button to save your trip, and try email again tomorrow." },
+        { status: 429 }
       );
     }
 
@@ -98,8 +142,8 @@ export async function POST(request) {
     const bookingRows = nights.map((night, i) => `
       <tr>
         <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; color: #374151;">
-          <strong style="color: #111;">${night.label}</strong><br/>
-          <span style="color: #6b7280; font-size: 12px;">${night.city}</span>
+          <strong style="color: #111;">${escapeHtml(night.label)}</strong><br/>
+          <span style="color: #6b7280; font-size: 12px;">${escapeHtml(night.city)}</span>
         </td>
         <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; text-align: right; white-space: nowrap;">
           ${i > 0 ? `<a href="${buildHotelUrl(night.city, addDays(trip.depart, i), addDays(trip.depart, i + 1))}" style="color: #D85A30; text-decoration: none; font-size: 13px; margin-right: 12px;">🏨 Hotels</a>` : ""}
@@ -138,16 +182,11 @@ export async function POST(request) {
           <h1 style="font-size: 22px; color: #F5F5F0; margin: 0;">🗺️ Your Road Trip Itinerary</h1>
           <p style="color: #D85A30; font-size: 13px; margin: 6px 0 0; letter-spacing: 0.1em;">EVERY ROAD · YOUR WAY™</p>
         </div>
-        <h2 style="font-size: 18px; color: #111;">${trip.start} → ${trip.end}</h2>
-        ${trip.depart ? `<p style="color: #6b7280; font-size: 14px;">Departing ${trip.depart}</p>` : ""}
+        <h2 style="font-size: 18px; color: #111;">${escapeHtml(trip.start)} → ${escapeHtml(trip.end)}</h2>
+        ${trip.depart ? `<p style="color: #6b7280; font-size: 14px;">Departing ${escapeHtml(trip.depart)}</p>` : ""}
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
         <div style="font-size: 14px; line-height: 1.8; color: #374151;">
-          ${itinerary
-            .replace(/\[CITY:[^\]]+\]/gi, "")
-            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-            .replace(/^#{1,3}\s*(Day\s+\d+[^\n]*)/gm, '<h2 style="font-size:16px;color:#fff;background:#2563eb;padding:8px 12px;border-radius:6px;margin-top:24px;">$1</h2>')
-            .replace(/\n/g, '<br/>')
-          }
+          ${itineraryToEmailHtml(itinerary)}
         </div>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
         ${bookingSection}
@@ -173,12 +212,17 @@ export async function POST(request) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_KEY}` },
         body: JSON.stringify({ from, to, subject, html: htmlBody }),
       });
-      const data = await res.json();
-      if (res.ok) return Response.json({ success: true });
-      lastError = data.message || "Failed to send";
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        logEmail(isFeedback ? "sent_feedback" : "sent");
+        return Response.json({ success: true });
+      }
+      lastError = `${res.status} ${String(data?.name || data?.message || "send_failed").slice(0, 120)}`;
     }
     throw new Error(lastError);
   } catch (e) {
-    return Response.json({ error: e.message }, { status: 500 });
+    // Provider details stay in the server log; visitors get a plain message.
+    console.error(JSON.stringify({ event: "ortp_email", outcome: "error", env: ENV, message: String(e?.message || "").slice(0, 300) }));
+    return Response.json({ error: "We couldn't send that email right now. Please try again later." }, { status: 500 });
   }
 }
